@@ -1,30 +1,23 @@
 
-# A command line library of tools to easily deploy on-device machine learning demos on Android mobile devices. 
-It solves the need for Machine Learning developers to know how to set up their development environment and which dependencies to install in order to build mobile app demoes of their models. 
+# Synnergy Diffusion studio: A code for evolutionary latent diffusion models.
+This code  can connect to several latent diffusion models, for text to image.
+Using evolutionary computation, we can combine or modify previously generated images.
 
-## Examples
- TBD
+## The paper is nominated for best paper award!
+https://gecco-2023.sigevo.org/Best-Paper-Nominations
 
 ## Requirements
-Google colab 
+Google colab.
 
 
 ## Building 
-rum google colab
+Just run and it should work, ping us if it does not :-)
 
 ## Installing 
-copy toi colab
+You can copy the colab and/or direcrtly run it.
 
-## How SD studio works
-...
-
-## Full documentation
-inside programm
-
-## Join the simple diffusio studio community
-
-
-See the [CONTRIBUTING](CONTRIBUTING.md) file for how to help out.
+## Authors
+Github loginss of authors: irumata, teytaud, mzameshina, mathuvu, artemru
 
 ## License
 MIT License
