@@ -1,5 +1,5 @@
 
-# Synnergy Diffusion studio: A code for evolutionary latent diffusion models.
+# Synergy Diffusion studio: A code for evolutionary latent diffusion models.
 This code  can connect to several latent diffusion models, for text to image.
 Using evolutionary computation, we can combine or modify previously generated images.
 
