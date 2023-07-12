@@ -15,6 +15,7 @@ Just run and it should work, ping us if it does not :-)
 
 ## Installing 
 You can copy the colab and/or direcrtly run it.
+https://fburl.com/sdstudio
 
 ## Authors
 Github loginss of authors: irumata (main author), teytaud, mzameshina, mathuvu, artemru
