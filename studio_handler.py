@@ -1,3 +1,5 @@
+#Copyright (c) Meta Platforms, Inc. and affiliates.
+
 #NEED TO BE REFACTOR
 
 import os
