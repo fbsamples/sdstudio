@@ -14,9 +14,7 @@ Google colab.
 Just run and it should work, ping us if it does not :-)
 
 ## Installing 
-You can copy the colab and/or directly run it.
-[Colab link
-](https://colab.research.google.com/drive/1HZ5jaSsHjZE_GX8bL9dQRKxYiqS5FSca?usp=sharing)
+You can open notebook and run it in google colab  [https://github.com/fbsamples/sdstudio/main/Diffusion_Studio_0_9.ipynb](https://github.com/fbsamples/sdstudio/blob/main/Diffusion_Studio_0_9.ipynb)
 ## Authors
 Github loginss of authors: irumata (main author), teytaud, mzameshina, mathuvu, artemru
 
