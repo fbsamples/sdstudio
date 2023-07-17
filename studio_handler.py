@@ -1,64 +1,73 @@
-#Copyright (c) Meta Platforms, Inc. and affiliates.
+# Copyright (c) Meta Platforms, Inc. and affiliates.
 
-#NEED TO BE REFACTOR
+# NEED TO BE REFACTOR
 
 import os
-os.environ["PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION"]="python"
+
+os.environ["PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION"] = "python"
 import streamlit as st
+
 st.set_page_config(page_title="Difussion Genetic UI", layout="wide")
-verbose=False
-import pandas as pd
-from PIL import Image
-from streamlit_drawable_canvas import st_canvas
-import torch
-from diffusers import StableDiffusionPipeline
-import joblib
+verbose = False
+import base64
 import pickle
-from PIL import Image
-from gfpgan.utils import GFPGANer
-from RealESRGAN import RealESRGAN
+
+import joblib
 
 import matplotlib.pyplot as plt
 import matplotlib.ticker as plticker
 import numpy as np
-import base64
+import pandas as pd
+import torch
+from diffusers import StableDiffusionPipeline
+from gfpgan.utils import GFPGANer
+from PIL import Image
+from RealESRGAN import RealESRGAN
+from streamlit_drawable_canvas import st_canvas
+
 try:
     from PIL import Image
 except ImportError:
     import Image
-import matplotlib.pyplot as plt
-import numpy as np
-import nevergrad as ng
-from sklearn import tree
-from sklearn.neural_network import MLPClassifier
-from sklearn.linear_model import LogisticRegression
-from pathlib import Path
-from shapely.geometry import Polygon
-import rasterio.features
 import ast
+
+import json, requests
+import webbrowser
+from pathlib import Path
+
+import cv2
+import matplotlib.pyplot as plt
+import nevergrad as ng
+import numpy as np
+import rasterio.features
+
 from diffusers import StableDiffusionInpaintPipeline
-from pydrive.auth import GoogleAuth
-from pydrive.drive import GoogleDrive
 from google.colab import auth
 from oauth2client.client import GoogleCredentials
-import cv2
-import requests, json
-import webbrowser
+from pydrive.auth import GoogleAuth
+from pydrive.drive import GoogleDrive
+from shapely.geometry import Polygon
+from sklearn import tree
+from sklearn.linear_model import LogisticRegression
+from sklearn.neural_network import MLPClassifier
 
 model_use_id = 1
 
-MIN_TOKEN_LENGTH=16
+MIN_TOKEN_LENGTH = 16
 HEIGHT_RESOLUTION = 512
 WIDTH_RESOLUTION = 512
 SIGMA_REDUCTION_PER_CHOICE = 0.7
 MINIMUM_BAD_NUMBER_FOR_MLP = 10
 POINT_COLUMNS = ["top", "left", "image", "x", "y"]
 DEVICE = "cuda"
-#0-sd 1 -sdmj
+# 0-sd 1 -sdmj
 from typing import Callable, List, Optional, Union
+
 from diffusers.pipelines.stable_diffusion import StableDiffusionPipelineOutput
+
+
 def slerp(t, v0, v1, DOT_THRESHOLD=0.9995):
-    """ helper function to spherically interpolate two arrays v1 v2 """
+    """helper function to spherically interpolate two arrays v1 v2"""
 
     if not isinstance(v0, np.ndarray):
         inputs_are_torch = True
@@ -82,6 +91,7 @@ def slerp(t, v0, v1, DOT_THRESHOLD=0.9995):
         v2 = torch.from_numpy(v2).to(input_device)
 
     return v2
+
 
 @torch.no_grad()
 def callSD(
@@ -114,9 +124,8 @@ def callSD(
     batch_size = 1 if isinstance(prompt, str) else len(prompt)
     device = pipe._execution_device
 
-
     # 3. Encode input promp
-    #skip this stpe
+    # skip this stpe
     # 4. Prepare timesteps
     pipe.scheduler.set_timesteps(num_inference_steps, device=device)
     timesteps = pipe.scheduler.timesteps
@@ -124,40 +133,49 @@ def callSD(
     # 5. Prepare latent variables
     num_channels_latents = pipe.unet.in_channels
 
-
     # 6. Prepare extra step kwargs. TODO: Logic should ideally just be moved out of the pipeline
     extra_step_kwargs = pipe.prepare_extra_step_kwargs(generator, eta)
 
     # 7. Denoising loop
     if "pndm_order" in pipe.scheduler.__dict__.keys():
-      order_c = pipe.scheduler.pndm_order
+        order_c = pipe.scheduler.pndm_order
     elif "order" in pipe.scheduler.__dict__.keys():
-      order_c = pipe.scheduler.order
+        order_c = pipe.scheduler.order
     else:
-      order_c = 1
+        order_c = 1
 
     num_warmup_steps = len(timesteps) - num_inference_steps * order_c
 
-    with pipe.progress_bar( range(num_inference_steps)) as progress_bar:
+    with pipe.progress_bar(range(num_inference_steps)) as progress_bar:
         for i, t in enumerate(timesteps):
             # expand the latents if we are doing classifier free guidance
-            latent_model_input = torch.cat([latents] * 2) if do_classifier_free_guidance else latents
+            latent_model_input = (
+                torch.cat([latents] * 2) if do_classifier_free_guidance else latents
+            )
             latent_model_input = pipe.scheduler.scale_model_input(latent_model_input, t)
 
             # predict the noise residual
 
-            noise_pred = pipe.unet(latent_model_input, t, encoder_hidden_states=text_embeddings).sample
+            noise_pred = pipe.unet(
+                latent_model_input, t, encoder_hidden_states=text_embeddings
+            ).sample
 
             # perform guidance
             if do_classifier_free_guidance:
                 noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
-                noise_pred = noise_pred_uncond + guidance_scale * (noise_pred_text - noise_pred_uncond)
+                noise_pred = noise_pred_uncond + guidance_scale * (
+                    noise_pred_text - noise_pred_uncond
+                )
 
                 # compute the previous noisy sample x_t -> x_t-1
-                latents = pipe.scheduler.step(noise_pred, t, latents, **extra_step_kwargs).prev_sample
+                latents = pipe.scheduler.step(
+                    noise_pred, t, latents, **extra_step_kwargs
+                ).prev_sample
 
             # call the callback, if provided
-            if i == len(timesteps) - 1 or ((i + 1) > num_warmup_steps and (i + 1) % order_c == 0):
+            if i == len(timesteps) - 1 or (
+                (i + 1) > num_warmup_steps and (i + 1) % order_c == 0
+            ):
                 progress_bar.update()
                 if callback is not None and i % callback_steps == 0:
                     callback(i, t, latents)
@@ -166,7 +184,9 @@ def callSD(
     image = pipe.decode_latents(latents)
 
     # 9. Run safety checker
-    image, has_nsfw_concept = pipe.run_safety_checker(image, device, text_embeddings.dtype)
+    image, has_nsfw_concept = pipe.run_safety_checker(
+        image, device, text_embeddings.dtype
+    )
 
     # 10. Convert to PIL
     if output_type == "pil":
@@ -175,7 +195,11 @@ def callSD(
     if not return_dict:
         return (image, has_nsfw_concept)
 
-    return StableDiffusionPipelineOutput(images=image, nsfw_content_detected=has_nsfw_concept)
+    return StableDiffusionPipelineOutput(
+        images=image, nsfw_content_detected=has_nsfw_concept
+    )
+
+
 def save_high_res(imfile, output):
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -211,8 +235,9 @@ def short(x, resolution):
     for u in range(4):
         for v in range(resolution):
             for w in range(resolution):
-                y[u][v // int(resolution/16)][w // int(resolution/16)] += x[u][v][w]
+                y[u][v // int(resolution / 16)][w // int(resolution / 16)] += x[u][v][w]
     return y.flatten()
+
 
 def generate_state(
     prompt: str = "drawing low-resolution: Greenpeace activists on battlefiled in heroes of might and magic 3",
@@ -240,7 +265,7 @@ def generate_state(
     state["polygons"] = []
     state["load_inpaint"] = False
     state["verbose"] = False
-    state["change_selected"]  = "save"
+    state["change_selected"] = "save"
     state["open_HF_SD_14"] = False
     state["drive_images"] = dict()
     state["drive"] = None
@@ -258,26 +283,27 @@ used_indexes_flatten = [False] * len(state["images_filenames"])
 points = []
 is_drive = True
 try:
-  gauth = joblib.load("gauth.j")
-  drive = GoogleDrive(gauth)
-  state["drive"] = drive
+    gauth = joblib.load("gauth.j")
+    drive = GoogleDrive(gauth)
+    state["drive"] = drive
 except:
-  is_drive = False
+    is_drive = False
 
-#def save_and_create_image(filepath: str, state,drive=None):
+# def save_and_create_image(filepath: str, state,drive=None):
 
 fb_logo = "https://w7.pngwing.com/pngs/550/868/png-transparent-facebook-facebook-share-facebook-share-button-share-facebook-facebook-button-facebook-icon-socialmedia-marketing-fb-social-media-flat-icon.png"
 links_dict = {}
 links_dict_file = "links_dict.j"
-if  Path(links_dict_file).is_file():
-  links_dict = joblib.load(links_dict_file)  
+if Path(links_dict_file).is_file():
+    links_dict = joblib.load(links_dict_file)
 
-def show_picture(state, image_index, points, used_indexes_flatten,preview=False):
+
+def show_picture(state, image_index, points, used_indexes_flatten, preview=False):
     st.caption(f"image from generation {state['iterations'][image_index]} ")
     image_filename = state["images_filenames"][image_index]
     # image = Image.open(image_filename)
     image = state["imagev"][image_index]
-    #image.thumbnail((WIDTH_RESOLUTION, HEIGHT_RESOLUTION))
+    # image.thumbnail((WIDTH_RESOLUTION, HEIGHT_RESOLUTION))
     width, height = image.size
     width, height = (WIDTH_RESOLUTION, HEIGHT_RESOLUTION)
     if not preview:
@@ -287,10 +313,12 @@ def show_picture(state, image_index, points, used_indexes_flatten,preview=False)
             key=f"checkbox_{image_index}",
         )
     else:
-       used_indexes_flatten[image_index] =False
+        used_indexes_flatten[image_index] = False
     if image_filename in links_dict.keys():
-      st.markdown(f"<a href=\"{links_dict[image_filename]}\"> <img src=\"{fb_logo}\" width=\"100\" height=\"30\"> </a>",
-      unsafe_allow_html = True)
+        st.markdown(
+            f'<a href="{links_dict[image_filename]}"> <img src="{fb_logo}" width="100" height="30"> </a>',
+            unsafe_allow_html=True,
+        )
 
     img_hr_file = f"image_{image_index}_hr.png"
     if not Path(img_hr_file).is_file() and not preview and False:
@@ -310,7 +338,7 @@ def show_picture(state, image_index, points, used_indexes_flatten,preview=False)
         if btn_face:
             save_high_res_face(image_filename, img_face_file)
     elif not preview:
-        st.caption("High resloution with fixed faces availiable on High resolution tab")
+        st.caption("High resloution with fixed faces available on High resolution tab")
 
     if used_indexes_flatten[image_index] and not preview:
         container = st.container()
@@ -322,7 +350,9 @@ def show_picture(state, image_index, points, used_indexes_flatten,preview=False)
             width=width,
             height=height,
             drawing_mode=drawing_mode,
-            point_display_radius=2*state["correction_multiplier"] if drawing_mode=="point" else 0,
+            point_display_radius=2 * state["correction_multiplier"]
+            if drawing_mode == "point"
+            else 0,
             key=f"canvas_{image_index}",
         )
         objects = None
@@ -340,13 +370,17 @@ def show_picture(state, image_index, points, used_indexes_flatten,preview=False)
 
         with container:
             if objects is not None and len(objects) > 0:
-                st.caption(f'Parts of image near points will be {state["change_selected"]}d. (Select one or several parts of the image for choosing what to preserve or what to change in the image)')
+                st.caption(
+                    f'Parts of image near points will be {state["change_selected"]}d. (Select one or several parts of the image for choosing what to preserve or what to change in the image)'
+                )
             else:
                 if len(state["all_points"]) > 0:
-                    original_title = '<p style="color:Red;"> You need to pickup point in at least two images or don\'t pickup any point If at least one point was choosen, we ignore images without points</p>'
+                    original_title = '<p style="color:Red;"> You need to pickup point in at least two images or don\'t pickup any point If at least one point was chosen, we ignore images without points</p>'
                     st.markdown(original_title, unsafe_allow_html=True)
                 else:
-                    st.caption("No points selected: variations of the entire image (selects points on the image for keeping or modifying specific parts).")
+                    st.caption(
+                        "No points selected: variations of the entire image (selects points on the image for keeping or modifying specific parts)."
+                    )
     else:
         st.image(image)
     st.markdown("""---""")
@@ -358,104 +392,141 @@ def generate_movie(
     verbose=False,
     generating_bar=None,
     guidance_scale=7.5,
-    temp_container = None
-
+    temp_container=None,
 ):
     result_pictures = []
-    if len(state["movie_order"])<2:
-      st.error("Not enough images selected")
-      st.stop()
+    if len(state["movie_order"]) < 2:
+        st.error("Not enough images selected")
+        st.stop()
     first_picture_index = state["movie_order"][0]
     do_classifier_free_guidance = guidance_scale > 1.0
-    total_images = state["llambda"]*(len(state["movie_order"]))
+    total_images = state["llambda"] * (len(state["movie_order"]))
 
     for index, pict_index in enumerate(state["movie_order"][1:]):
         result_pictures.append(state["imagev"][first_picture_index])
-        prompt_0 =  state["prompts"][first_picture_index]
+        prompt_0 = state["prompts"][first_picture_index]
         latents_0 = state["images_latents"][first_picture_index]
 
         prompt_1 = state["prompts"][pict_index]
         latents_1 = state["images_latents"][pict_index]
 
-        prompt_enc_0 = pipe._encode_prompt(prompt_0,DEVICE,num_images_per_prompt=1,do_classifier_free_guidance=do_classifier_free_guidance,negative_prompt=None)
-        prompt_enc_1 = pipe._encode_prompt(prompt_1,DEVICE,num_images_per_prompt=1,do_classifier_free_guidance=do_classifier_free_guidance,negative_prompt=None)
-        interpolate_prompts = np.linspace(prompt_enc_0.detach().cpu().numpy(), prompt_enc_1.detach().cpu().numpy(), num=state["llambda"]+1,endpoint=False)
-        #interpolate_latents = np.linspace(latents_0.detach().cpu().numpy(), latents_1.detach().cpu().numpy(), num=state["llambda"]+1,endpoint=False)
-        st_index=1
+        prompt_enc_0 = pipe._encode_prompt(
+            prompt_0,
+            DEVICE,
+            num_images_per_prompt=1,
+            do_classifier_free_guidance=do_classifier_free_guidance,
+            negative_prompt=None,
+        )
+        prompt_enc_1 = pipe._encode_prompt(
+            prompt_1,
+            DEVICE,
+            num_images_per_prompt=1,
+            do_classifier_free_guidance=do_classifier_free_guidance,
+            negative_prompt=None,
+        )
+        interpolate_prompts = np.linspace(
+            prompt_enc_0.detach().cpu().numpy(),
+            prompt_enc_1.detach().cpu().numpy(),
+            num=state["llambda"] + 1,
+            endpoint=False,
+        )
+        # interpolate_latents = np.linspace(latents_0.detach().cpu().numpy(), latents_1.detach().cpu().numpy(), num=state["llambda"]+1,endpoint=False)
+        st_index = 1
         if verbose:
-            st.caption(f'1 {type(state["imagev"][first_picture_index])} {state["imagev"][first_picture_index].size}')
+            st.caption(
+                f'1 {type(state["imagev"][first_picture_index])} {state["imagev"][first_picture_index].size}'
+            )
 
-        for gen_index,prompt_gen in enumerate(interpolate_prompts[st_index:]):
-            latents_gen = slerp((gen_index+st_index)/(state["llambda"]+1), latents_0, latents_1)
-            res_img = callSD(pipe, torch.from_numpy(prompt_gen).to(DEVICE),
-                          latents=latents_gen.to(DEVICE),do_classifier_free_guidance=do_classifier_free_guidance).images[0]
+        for gen_index, prompt_gen in enumerate(interpolate_prompts[st_index:]):
+            latents_gen = slerp(
+                (gen_index + st_index) / (state["llambda"] + 1), latents_0, latents_1
+            )
+            res_img = callSD(
+                pipe,
+                torch.from_numpy(prompt_gen).to(DEVICE),
+                latents=latents_gen.to(DEVICE),
+                do_classifier_free_guidance=do_classifier_free_guidance,
+            ).images[0]
             if temp_container is not None:
                 with temp_container:
                     st.caption(f"image #{gen_index}")
                     st.image(res_img)
                     st.write(st.dg)
-            st.caption(f'{type(res_img)} {res_img.size}')
+            st.caption(f"{type(res_img)} {res_img.size}")
             result_pictures.append(res_img)
             if generating_bar is not None:
                 generating_bar.progress(1 / total_images)
         first_picture_index = pict_index
     result_pictures.append(state["imagev"][state["movie_order"][-1]])
-    st.caption(f'1 {type(state["imagev"][state["movie_order"][-1]])} {state["imagev"][state["movie_order"][-1]].size}')
-
+    st.caption(
+        f'1 {type(state["imagev"][state["movie_order"][-1]])} {state["imagev"][state["movie_order"][-1]].size}'
+    )
 
     img_gif = result_pictures[0]
-    gif_name = f'movie_{len(state["gif_names"])}.gif'      
-    img_gif.save(fp=gif_name, format='GIF', append_images=result_pictures[1:],
-             save_all=True, duration=state["duration_between_slides"]*len(result_pictures), loop=0)
+    gif_name = f'movie_{len(state["gif_names"])}.gif'
+    img_gif.save(
+        fp=gif_name,
+        format="GIF",
+        append_images=result_pictures[1:],
+        save_all=True,
+        duration=state["duration_between_slides"] * len(result_pictures),
+        loop=0,
+    )
 
     state["gif_names"].append(gif_name)
     return state
+
 
 def generate_inpaint(
     state: dict,
     pipe=None,
     verbose=False,
     generating_bar=None,
-    cols:list =None,
-    containers:list=[],
+    cols: list = None,
+    containers: list = [],
     points=None,
     used_indexes_flatten=None,
     chosen=0,
     preserved_images=[],
-    preserved_latent=[[0]]
-
+    preserved_latent=[[0]],
 ):
 
-
-    st.dataframe(state["polygons"] )
+    st.dataframe(state["polygons"])
     choosen_polys = state["polygons"][state["polygons"]["image"] == chosen[0]]
     polys_to_show = []
     for _, poly_row in choosen_polys.iterrows():
         poly = poly_row["path"]
         poly = ast.literal_eval(poly)
-        new_poly = [(l[1],l[2]) for l in poly if len(l)>2]
+        new_poly = [(l[1], l[2]) for l in poly if len(l) > 2]
         new_poly.append(new_poly[0])
-        new_poly=Polygon(new_poly)
+        new_poly = Polygon(new_poly)
         polys_to_show.append(new_poly)
 
-    img_mask = rasterio.features.rasterize(polys_to_show, out_shape=( state["image_dimensions"],  state["image_dimensions"]))
-    img_mask*=255
-    if state["change_selected"] !="change":
-        img_mask-=255
-        img_mask*=-1
+    img_mask = rasterio.features.rasterize(
+        polys_to_show, out_shape=(state["image_dimensions"], state["image_dimensions"])
+    )
+    img_mask *= 255
+    if state["change_selected"] != "change":
+        img_mask -= 255
+        img_mask *= -1
 
-    if len(state["iterations"]) >0:
-      gen_iteration = state["iterations"][-1]+1
+    if len(state["iterations"]) > 0:
+        gen_iteration = state["iterations"][-1] + 1
     else:
-      gen_iteration = 0
+        gen_iteration = 0
     latents = preserved_latent[0]
-    images = state["pipe_inpaint"](prompt=state["prompt"], image=preserved_images[0], mask_image=img_mask,num_images_per_prompt=state["llambda"]).images
+    images = state["pipe_inpaint"](
+        prompt=state["prompt"],
+        image=preserved_images[0],
+        mask_image=img_mask,
+        num_images_per_prompt=state["llambda"],
+    ).images
     for image in images:
-        #image_index = total_count - i - 1
-        image_index = len( state["imagev"]) 
+        # image_index = total_count - i - 1
+        image_index = len(state["imagev"])
         image_name = "image_{}.png".format(image_index)
         if verbose:
-          st.text(f"saving {image_name}")
+            st.text(f"saving {image_name}")
         image.save(image_name)
         hr_face = f"image_{image_index}_face_hr.png"
         if os.path.exists(hr_face):
@@ -463,9 +534,9 @@ def generate_inpaint(
         hr_res = f"image_{image_index}_hr.png"
         if os.path.exists(hr_res):
             os.remove(hr_res)
-        #state["imagev"][image_index] = image
-        #state["iterations"][image_index] = gen_iteration
-        #state["images_filenames"][image_index] = image_name
+        # state["imagev"][image_index] = image
+        # state["iterations"][image_index] = gen_iteration
+        # state["images_filenames"][image_index] = image_name
         state["imagev"].append(image)
         state["images_filenames"].append(image_name)
         state["iterations"].append(gen_iteration)
@@ -473,7 +544,7 @@ def generate_inpaint(
         used_indexes_flatten.append(False)
         # Here we show picture
 
-        #state["images_latents"][image_index] = latents
+        # state["images_latents"][image_index] = latents
         state["images_latents"].append(latents)
         if verbose:
             st.text(f'image latents last { state["images_latents"][-1].shape}')
@@ -482,16 +553,17 @@ def generate_inpaint(
     with open(".state", "wb") as f:
         joblib.dump(state, f)
     return state
+
+
 def generate_pictures(
     state: dict,
     pipe=None,
     verbose=False,
     generating_bar=None,
-    cols:list =None,
-    containers:list=[],
+    cols: list = None,
+    containers: list = [],
     points=None,
     used_indexes_flatten=None,
-    
 ):
 
     latent_base = None  # if not None, base for random mutations
@@ -507,33 +579,39 @@ def generate_pictures(
             preserved_images += [state["imagev"][choice]]
         chosen += [choice]
     good = [
-        short(state["images_latents"][i].cpu().detach().numpy().flatten(), state["resolution"])
+        short(
+            state["images_latents"][i].cpu().detach().numpy().flatten(),
+            state["resolution"],
+        )
         for i in range(len(state["images_latents"]))
         if i in state["total_choosen"]
     ]
     bad = [
-        short(state["images_latents"][i].cpu().detach().numpy().flatten(), state["resolution"])
+        short(
+            state["images_latents"][i].cpu().detach().numpy().flatten(),
+            state["resolution"],
+        )
         for i in range(len(state["images_latents"]))
         if i not in state["total_choosen"]
     ]
     st.text("ready to generation")
 
     if len(preserved_latent) == 1:
-        if len(state["polygons"])>0:
+        if len(state["polygons"]) > 0:
             if verbose:
                 st.text("INPAINT")
-            return generate_inpaint(    state,
-    pipe,
-    verbose,
-    generating_bar,
-    cols,
-    containers,
-    points,
-    used_indexes_flatten,
-    chosen,
-    preserved_images,
-    preserved_latent
-
+            return generate_inpaint(
+                state,
+                pipe,
+                verbose,
+                generating_bar,
+                cols,
+                containers,
+                points,
+                used_indexes_flatten,
+                chosen,
+                preserved_images,
+                preserved_latent,
             )
         if verbose:
 
@@ -556,7 +634,7 @@ def generate_pictures(
                 latent_basev = []
                 for idx in reversed(range(llambda)):
                     correction_multiplier = state["correction_multiplier"]
-                    radius = correction_multiplier*(idx + 1) / (16.0 * (llambda))
+                    radius = correction_multiplier * (idx + 1) / (16.0 * (llambda))
                     base = the_base.clone()
                     randomized = 0
                     for h in range(state["resolution"]):
@@ -566,18 +644,20 @@ def generate_pictures(
                             distances = [
                                 np.max(np.abs(np.array([xh, xv]) - c)) for c in clicks
                             ]
-                            #if verbose:
+                            # if verbose:
                             #  print_text = f"idx {idx} h {h} xh {xh} v {v} xv {xv} dist min {min(distances)} rad {radius}"
-                            if min(distances) > radius and state["change_selected"] == "save":
+                            if (
+                                min(distances) > radius
+                                and state["change_selected"] == "save"
+                            ):
                                 base[0, :, h, v] = torch.randn(4)
-                                randomized +=1
+                                randomized += 1
                             if min(distances) < radius and change_selected == "change":
                                 base[0, :, h, v] = torch.randn(4)
-                                randomized +=1
+                                randomized += 1
                     if verbose:
                         st.text(f"idx {idx} randomized {randomized}")
-   
- 
+
                     latent_basev.append(base)
             else:
                 if verbose:
@@ -597,17 +677,19 @@ def generate_pictures(
             latent_basev = []
             for idx in range(llambda):
                 if verbose:
-                    st.text("here 3")           
+                    st.text("here 3")
                 latent_base = state["images_latents"][chosen[0]].clone()
                 b = len(preserved_images)
                 correction_multiplier = 1.1
-                correction_multiplier = state["correction_multiplier"]/4
-                ratio = 1.0 + correction_multiplier*0.25 * ((idx) / (1e-5 + llambda - b - 1.0))
+                correction_multiplier = state["correction_multiplier"] / 4
+                ratio = 1.0 + correction_multiplier * 0.25 * (
+                    (idx) / (1e-5 + llambda - b - 1.0)
+                )
 
-                #ratio = 1.0 + 0.25 * ((idx - b) / (1e-5 + llambda - b - 1.0))
+                # ratio = 1.0 + 0.25 * ((idx - b) / (1e-5 + llambda - b - 1.0))
                 choices = []
-                choosen_dict = {"random":0}
-                randomized=0
+                choosen_dict = {"random": 0}
+                randomized = 0
                 min_radius = 0.3
                 for u in range(state["resolution"]):
                     xu = (u + 0.5) / float(state["resolution"])
@@ -623,7 +705,7 @@ def generate_pictures(
                                 )
                                 for _, point in state["all_points"][
                                     state["all_points"]["image"] == c
-                                                        ].iterrows()
+                                ].iterrows()
                             ]
                             dist += [min(dists_point)]
 
@@ -636,18 +718,21 @@ def generate_pictures(
                             choice = chosen[int(np.argmin(dist))]
                         elif state["change_selected"] == "change":
                             choice = chosen[int(np.argmax(dist))]
-                         
-                        choosen_dict[str(choice)] = choosen_dict.get(str(choice),0)+1
+
+                        choosen_dict[str(choice)] = choosen_dict.get(str(choice), 0) + 1
                         choices += [choice]
                         latent_base[0, :, u, v] = state["images_latents"][choice][
-                                0, :, u, v
-                            ]
-                        if sorted_dist[0] > sorted_dist[1] / ratio and  sorted_dist[0] > min_radius:
+                            0, :, u, v
+                        ]
+                        if (
+                            sorted_dist[0] > sorted_dist[1] / ratio
+                            and sorted_dist[0] > min_radius
+                        ):
                             randomized += 1
-                            choosen_dict["random"]+=1
+                            choosen_dict["random"] += 1
                             latent_base[0, :, u, v] = torch.randn((4))
                 if verbose:
-                    st.text(f"idx {idx} randomized {randomized} choosen {choosen_dict}")
+                    st.text(f"idx {idx} randomized {randomized} chosen {choosen_dict}")
                 latent_basev += [latent_base]
 
         else:
@@ -676,27 +761,33 @@ def generate_pictures(
 
         if not state["same_z"]:
 
-          for i in range(llambda):
+            for i in range(llambda):
 
-              if latent_base is None:
-                  latents = torch.randn((1, 4, state["resolution"], state["resolution"])).half()
-              else:
-                  if verbose:
-                      st.text(f"setted new latinv from latent_base ")
-                  latents = latent_base.to("cuda")+ state["sigma"] * (
-                      (i+1) / (llambda+1)
-                      ) * torch.randn((1, 4, state["resolution"], state["resolution"])).half().to("cuda")
+                if latent_base is None:
+                    latents = torch.randn(
+                        (1, 4, state["resolution"], state["resolution"])
+                    ).half()
+                else:
+                    if verbose:
+                        st.text(f"setted new latinv from latent_base ")
+                    latents = latent_base.to("cuda") + state["sigma"] * (
+                        (i + 1) / (llambda + 1)
+                    ) * torch.randn(
+                        (1, 4, state["resolution"], state["resolution"])
+                    ).half().to(
+                        "cuda"
+                    )
 
-                  l = latents.cpu().numpy().flatten()
-                  coef = np.sqrt(len(l) / np.sum(l**2))
-                  latents = coef * latents
-              latentv += [latents]
+                    l = latents.cpu().numpy().flatten()
+                    coef = np.sqrt(len(l) / np.sum(l**2))
+                    latents = coef * latents
+                latentv += [latents]
         else:
-          if latent_base is None:
-            st.error("Can't build similar to this type of pictures choice")
-          if verbose:
-              st.text("here to print")
-          latentv+=[latent_base.to("cuda")]
+            if latent_base is None:
+                st.error("Can't build similar to this type of pictures choice")
+            if verbose:
+                st.text("here to print")
+            latentv += [latent_base.to("cuda")]
     if len(bad) < MINIMUM_BAD_NUMBER_FOR_MLP or len(good) == 0:
         state["no_ml"] = True
     if not state["no_ml"]:
@@ -709,24 +800,25 @@ def generate_pictures(
     if generating_bar is not None:
         generating_bar.progress(1 / (len(latentv) + 1))
     total_count = len(state["imagev"]) + llambda
-    #state["imagev"] += [ None] * llambda
-    #state["images_filenames"] += [ None] * llambda
-    #state["images_latents"] += [ None] * llambda
+    # state["imagev"] += [ None] * llambda
+    # state["images_filenames"] += [ None] * llambda
+    # state["images_latents"] += [ None] * llambda
 
-    #used_indexes_flatten += [False] * llambda
-    if len(state["iterations"]) >0:
-      gen_iteration = state["iterations"][-1]+1
+    # used_indexes_flatten += [False] * llambda
+    if len(state["iterations"]) > 0:
+        gen_iteration = state["iterations"][-1] + 1
     else:
-      gen_iteration = 0
-    #state["iterations"] += [ gen_iteration] * llambda
-
+        gen_iteration = 0
+    # state["iterations"] += [ gen_iteration] * llambda
 
     if cols is not None and used_indexes_flatten is not None:
-      for img_index in range(len( state["imagev"]),len( state["imagev"])+len(latentv)):
-          column = cols[0] if img_index % 2 == 0 else cols[1]
-          with column:
-              cont = st.container()
-              containers.insert(0,cont)
+        for img_index in range(
+            len(state["imagev"]), len(state["imagev"]) + len(latentv)
+        ):
+            column = cols[0] if img_index % 2 == 0 else cols[1]
+            with column:
+                cont = st.container()
+                containers.insert(0, cont)
     if verbose:
         st.text(f'imagev len new  {len(state["imagev"])}')
 
@@ -738,30 +830,49 @@ def generate_pictures(
             use_rs = False
             if use_rs:
                 opt = ng.optimizers.registry["RandomSearch"](
-                    4 * state["resolution"] * state["resolution"], budget=7, num_workers=6
+                    4 * state["resolution"] * state["resolution"],
+                    budget=7,
+                    num_workers=6,
                 )
-                opt.suggest(short(latents.cpu().detach().numpy().flatten(),state["resolution"]))
+                opt.suggest(
+                    short(latents.cpu().detach().numpy().flatten(), state["resolution"])
+                )
                 opt.minimize(
                     lambda x: tclf.predict_proba(
-                        [short((np.sqrt(len(x)) / np.linalg.norm(x)) * x,state["resolution"])]
+                        [
+                            short(
+                                (np.sqrt(len(x)) / np.linalg.norm(x)) * x,
+                                state["resolution"],
+                            )
+                        ]
                     )[0][0]
                 )
                 recom = opt.recommend().value
                 recom = (np.sqrt(len(recom)) / np.linalg.norm(recom)) * recom
             else:
                 opt = ng.optimizers.registry["DE"](
-                    4 * state["resolution"] * state["resolution"], budget=20 + i * 3, num_workers=1
+                    4 * state["resolution"] * state["resolution"],
+                    budget=20 + i * 3,
+                    num_workers=1,
                 )
                 z0 = latents.cpu().detach().numpy().flatten()
                 epsilon = np.exp(i - llambda)
+
                 def loss(x):
                     l = z0 + epsilon * x
                     l = (np.sqrt(len(l)) / np.linalg.norm(l)) * l
-                    return tclf.predict_proba([short(l,state["resolution"])])[0][0]
+                    return tclf.predict_proba([short(l, state["resolution"])])[0][0]
+
                 opt.minimize(loss)
                 recom = z0 + epsilon * opt.recommend().value
                 recom = (np.sqrt(len(recom)) / np.linalg.norm(recom)) * recom
-            latents = torch.from_numpy(recom.reshape((1, 4, state["resolution"], state["resolution"]))).half().to("cuda")
+            latents = (
+                torch.from_numpy(
+                    recom.reshape((1, 4, state["resolution"], state["resolution"]))
+                )
+                .half()
+                .to("cuda")
+            )
             latentv[i] = latents
             if verbose:
                 st.text(f"new latents {latents.shape}")
@@ -770,11 +881,11 @@ def generate_pictures(
         # Here we call SD. This uses the GPU and takes a bit of time.
         if pipe is not None:
             image = pipe(prompt=state["prompt"], latents=latents).images[0]
-            #image_index = total_count - i - 1
-            image_index = len( state["imagev"]) 
+            # image_index = total_count - i - 1
+            image_index = len(state["imagev"])
             image_name = "image_{}.png".format(image_index)
             if verbose:
-              st.text(f"saving {image_name}")
+                st.text(f"saving {image_name}")
             image.save(image_name)
             hr_face = f"image_{image_index}_face_hr.png"
             if os.path.exists(hr_face):
@@ -782,9 +893,9 @@ def generate_pictures(
             hr_res = f"image_{image_index}_hr.png"
             if os.path.exists(hr_res):
                 os.remove(hr_res)
-            #state["imagev"][image_index] = image
-            #state["iterations"][image_index] = gen_iteration
-            #state["images_filenames"][image_index] = image_name
+            # state["imagev"][image_index] = image
+            # state["iterations"][image_index] = gen_iteration
+            # state["images_filenames"][image_index] = image_name
             state["imagev"].append(image)
             state["images_filenames"].append(image_name)
             state["iterations"].append(gen_iteration)
@@ -793,9 +904,11 @@ def generate_pictures(
             # Here we show picture
             if containers is not None and used_indexes_flatten is not None:
                 with containers[image_index]:
-                  show_picture(state, image_index, points, used_indexes_flatten,preview=True)
+                    show_picture(
+                        state, image_index, points, used_indexes_flatten, preview=True
+                    )
 
-        #state["images_latents"][image_index] = latents
+        # state["images_latents"][image_index] = latents
         state["images_latents"].append(latents)
         if verbose:
             st.text(f'image latents last { state["images_latents"][-1].shape}')
@@ -807,7 +920,10 @@ def generate_pictures(
         joblib.dump(state, f)
     return state
 
-st.write("You can publish all these picture in [FB Ads](https://www.facebook.com/business/tools/ads-manager )")
+
+st.write(
+    "You can publish all these picture in [FB Ads](https://www.facebook.com/business/tools/ads-manager )"
+)
 st.caption(
     """If you have an error, try to "reload state" or "reset state" buttons. If UI stucks for more than 2 minutes with any reason try to reload this page and if it doesn't help - restart\
  in colab (Runtime->Restart and run all), then click on the newly created link"""
@@ -816,8 +932,8 @@ st.caption(
 # Initialization
 with st.sidebar:
 
-    nn_options = ["SD v2","SD v1.4", "SD v1.4 tuned on MidJourney"]
-  
+    nn_options = ["SD v2", "SD v1.4", "SD v1.4 tuned on MidJourney"]
+
     nn_to_gen = st.radio(
         "Advanced: Select Neural Network",
         key="NN choise",
@@ -825,11 +941,9 @@ with st.sidebar:
     )
     model_use_id = nn_options.index(nn_to_gen)
     if nn_to_gen == "SD v1.4":
-      open_hugging_expander=True
+        open_hugging_expander = True
     else:
-      open_hugging_expander=False
-
-
+        open_hugging_expander = False
 
     with st.expander("Hugging face login ", open_hugging_expander):
         header_container = st.container()
@@ -845,23 +959,25 @@ with st.sidebar:
             pass
 
         with header_container:
-            if (
-                "colab_login" not in state
-                or state["colab_login"] == False
-            ):
+            if "colab_login" not in state or state["colab_login"] == False:
                 st.markdown(
-                    """You need first register on [hugging face](https://huggingface.co/join) 
-        and get [access token](https://huggingface.co/settings/tokens) 
+                    """You need first register on [hugging face](https://huggingface.co/join)
+        and get [access token](https://huggingface.co/settings/tokens)
         (it's in Menu/Settings/Access Tokens).
         The paste the token to the window"""
                 )
                 def_value = "paste token here"
-                if "token" in state and len(state["token"]) > MIN_TOKEN_LENGTH and state["token"]!=def_value:
+                if (
+                    "token" in state
+                    and len(state["token"]) > MIN_TOKEN_LENGTH
+                    and state["token"] != def_value
+                ):
                     def_value = state["token"]
 
                 token = st.text_input(
-                    label="copy your hugging face token here", value="",help="paste your toke here"
-
+                    label="copy your hugging face token here",
+                    value="",
+                    help="paste your toke here",
                 )
                 if len(token) > 5:
                     state["token"] = token
@@ -870,38 +986,39 @@ with st.sidebar:
             else:
 
                 st.caption("huggingface token stored or colab login")
-    state["resolution"] = 64 # if model_use_id >0 else 96
-    state["image_dimensions"] = 512# if model_use_id >0 else 768
-    state["load_inpaint"] = st.checkbox("download inpaint NN (may need colab pro version with additional memory)")
+    state["resolution"] = 64  # if model_use_id >0 else 96
+    state["image_dimensions"] = 512  # if model_use_id >0 else 768
+    state["load_inpaint"] = st.checkbox(
+        "download inpaint NN (may need colab pro version with additional memory)"
+    )
 
 # make sure you're logged in with `huggingface-cli login`
 if state["load_inpaint"]:
     if "pipe_inpaint" not in state:
-        with st.spinner(   "Downloading Diffusion inpaint data. It would take about 40 seconds."):
+        with st.spinner(
+            "Downloading Diffusion inpaint data. It would take about 40 seconds."
+        ):
 
             pipe_inpaint = StableDiffusionInpaintPipeline.from_pretrained(
                 "stabilityai/stable-diffusion-2-inpainting",
-                #revision="fp16",
-              #torch_dtype=torch.float16,
-              #  use_auth_token=
+                # revision="fp16",
+                # torch_dtype=torch.float16,
+                #  use_auth_token=
             )
 
-              
         state["pipe_inpaint"] = pipe_inpaint
     else:
         pipe_inpaint = state["pipe_inpaint"]
     pipe_inpaint = pipe_inpaint.to("cuda")
-if "pipe" not in state or state["model_use_id"] != model_use_id :
-    with st.spinner(
-        "Downloading Diffusion data. It would take about 40 seconds."
-    ):
+if "pipe" not in state or state["model_use_id"] != model_use_id:
+    with st.spinner("Downloading Diffusion data. It would take about 40 seconds."):
         if model_use_id == 0:
-          pipe_file_name = ".pipeSD2"
+            pipe_file_name = ".pipeSD2"
 
         elif model_use_id == 1:
-          pipe_file_name = ".pipeSD"
+            pipe_file_name = ".pipeSD"
         elif model_use_id == 2:
-          pipe_file_name = ".pipeSDMJ"
+            pipe_file_name = ".pipeSDMJ"
         pipe_file = Path(pipe_file_name)
         if pipe_file.is_file():
             with open(pipe_file_name, "rb") as pipeFile:
@@ -911,36 +1028,35 @@ if "pipe" not in state or state["model_use_id"] != model_use_id :
 
                 use_auth_token = (
                     True
-                    if "token" not in state
-                    or state["colab_login"]
+                    if "token" not in state or state["colab_login"]
                     else state["token"]
                 )
                 if model_use_id == 0:
-                  model_sd2 ="stabilityai/stable-diffusion-2-base"
-                  pipe = StableDiffusionPipeline.from_pretrained(
-                      model_sd2,
-                      revision="fp16",
-                      torch_dtype=torch.float16#,
-                   #   use_auth_token=use_auth_token,
-                  )
+                    model_sd2 = "stabilityai/stable-diffusion-2-base"
+                    pipe = StableDiffusionPipeline.from_pretrained(
+                        model_sd2,
+                        revision="fp16",
+                        torch_dtype=torch.float16  # ,
+                        #   use_auth_token=use_auth_token,
+                    )
                 elif model_use_id == 1:
-                  model_sd ="CompVis/stable-diffusion-v1-4"
-                  pipe = StableDiffusionPipeline.from_pretrained(
-                      model_sd,
-                      revision="fp16",
-                      torch_dtype=torch.float16,
-                      use_auth_token=use_auth_token,
-                  )
+                    model_sd = "CompVis/stable-diffusion-v1-4"
+                    pipe = StableDiffusionPipeline.from_pretrained(
+                        model_sd,
+                        revision="fp16",
+                        torch_dtype=torch.float16,
+                        use_auth_token=use_auth_token,
+                    )
                 elif model_use_id == 2:
 
-                  model_sd_mj = "prompthero/midjourney-v4-diffusion"
-                  pipe = StableDiffusionPipeline.from_pretrained(
-                      model_sd_mj,
-                      torch_dtype=torch.float16,
-                      use_auth_token=use_auth_token,
-                  )
+                    model_sd_mj = "prompthero/midjourney-v4-diffusion"
+                    pipe = StableDiffusionPipeline.from_pretrained(
+                        model_sd_mj,
+                        torch_dtype=torch.float16,
+                        use_auth_token=use_auth_token,
+                    )
                 else:
-                  st.error("bad model id")
+                    st.error("bad model id")
             except:
                 e = RuntimeError(
                     "Problem with Diffusion downolading, please paste huggingface token to the left box"
@@ -950,15 +1066,15 @@ if "pipe" not in state or state["model_use_id"] != model_use_id :
             with open(pipe_file_name, "wb") as f:
                 joblib.dump(pipe, f)
 
-
-
-        state["model_use_id"] = model_use_id 
+        state["model_use_id"] = model_use_id
         state["pipe"] = pipe
 else:
     pipe = state["pipe"]
 pipe = pipe.to("cuda")
 
-create_tab, view_tab, gif_tab = st.tabs(["Images to generate", "High-resolution images", "Animation generation"])
+create_tab, view_tab, gif_tab = st.tabs(
+    ["Images to generate", "High-resolution images", "Animation generation"]
+)
 with create_tab:
 
     header_col1, header_col2 = st.columns([4, 1])
@@ -970,8 +1086,8 @@ with create_tab:
             help="""'
     In general, the best diffusion prompts will have this form:
 
-      “A [Type of picture] of a [composition], [style]” 
-      Type of picture: photo or painting (with styles brush/matte/oil) or 3d renger or map (modern/medieval)    
+      “A [Type of picture] of a [composition], [style]”
+      Type of picture: photo or painting (with styles brush/matte/oil) or 3d renger or map (modern/medieval)
       Compositions: what is on a picture. Usually several objects with minimum verbs.
       Style: style of drawing, for example: steampunk or cyberpunk, realistic, Van Gogh, etc.
       You can use famous person names to use their faces or famous painters/creators to use their styles.
@@ -984,7 +1100,7 @@ with create_tab:
             rework = False
     with header_col2:
         regenerate_button = st.button("Generate")
-        #st.caption("if page stuck")
+        # st.caption("if page stuck")
 
     with st.sidebar:
         st.caption("""This checkbox for cases without good outcome.""")
@@ -993,7 +1109,9 @@ with create_tab:
         )
         llambda = st.slider("How many pictures generate?", 1, 20, 4)
 
-        correction_multiplier = st.slider("How huge radius accross the point we should use", 1, 10, 2)
+        correction_multiplier = st.slider(
+            "How huge radius accross the point we should use", 1, 10, 2
+        )
         state["correction_multiplier"] = correction_multiplier
         state["llambda"] = llambda
         refresh_button = st.button("Reload last state")
@@ -1007,22 +1125,20 @@ with create_tab:
             state["state"] = state
         verbose = st.checkbox("verbose mode for testing", False)
         state["verbose"] = verbose
-        state["same_z"] = st.checkbox("Create new picture exactly similar to the selected picture")
+        state["same_z"] = st.checkbox(
+            "Create new picture exactly similar to the selected picture"
+        )
 
         drawing_mode = "point"
         if state["load_inpaint"]:
-          drawing_mode =  st.sidebar.selectbox(
-      "Drawing tool:", ("point","polygon"))
-          
-        change_selected = st.sidebar.selectbox(
-    "Selected area :", ("change","save")
-)
+            drawing_mode = st.sidebar.selectbox("Drawing tool:", ("point", "polygon"))
+
+        change_selected = st.sidebar.selectbox("Selected area :", ("change", "save"))
         state["change_selected"] = change_selected
 
-
-    with st.expander ("How to guide the next generation of images"):
+    with st.expander("How to guide the next generation of images"):
         st.caption(
-            '''
+            """
             * No selected image = just rerun generation with new random.
             * One selected image and no point = we generate variations of this image.
             * One image and selected points = regenerate image with keeping or abandoning area around the points according to choice (see bottom left)
@@ -1032,18 +1148,17 @@ with create_tab:
             ML prediction checkbox - generation images based on previous choices
             Fix face and generate high qulaity image - generate images of the next tap
             WARNING: for the first several iterations it's usually better to just select one image.
-            '''
-
+            """
         )
 
     picture_col1, picture_col2 = st.columns(2)
     cols = [picture_col1, picture_col2]
-    containers=[]
-    for img_index in range(len( state["imagev"])):
+    containers = []
+    for img_index in range(len(state["imagev"])):
         column = cols[0] if img_index % 2 == 0 else cols[1]
         with column:
             cont = st.container()
-            containers.insert(0,cont)
+            containers.insert(0, cont)
     if regenerate_button:
         st.caption(
             "generation progress may take several minutes, depends on GPU allocation and image number"
@@ -1067,23 +1182,22 @@ with create_tab:
     num_image_to_show = len(state["images_filenames"])
     num_image_to_show -= state["llambda"] if regenerate_button else 0
     for image_index in reversed(list(range(num_image_to_show))):
-#       column = cols[0] if image_index % 2 == 0 else cols[1]
+        #       column = cols[0] if image_index % 2 == 0 else cols[1]
         containers[image_index].empty()
         with containers[image_index]:
             show_picture(state, image_index, points, used_indexes_flatten)
 
 prev_iter = -1
 for index_image, iter in enumerate(state["iterations"]):
-    if iter!=prev_iter:
+    if iter != prev_iter:
         st.text(f'On iteration {iter} prompt was: {state["prompts"][index_image]}')
         prev_iter = iter
 
 
-
 if len(points) > 0:
     state["all_points"] = pd.concat(points)
-    state["polygons"] =  state["all_points"][state["all_points"]["type"]=="path"]
-    state["all_points"] =  state["all_points"][state["all_points"]["type"]=="circle"]
+    state["polygons"] = state["all_points"][state["all_points"]["type"] == "path"]
+    state["all_points"] = state["all_points"][state["all_points"]["type"] == "circle"]
 
 
 if len(state["all_points"]) < 1:
@@ -1093,8 +1207,8 @@ state["used_indexes"] = [
     img_idx for img_idx, val in enumerate(used_indexes_flatten) if val == True
 ]
 
-if set( state["movie_order"]) != set(state["used_indexes"]):
-  state["movie_order"] = state["used_indexes"]
+if set(state["movie_order"]) != set(state["used_indexes"]):
+    state["movie_order"] = state["used_indexes"]
 if verbose:
     st.text("Internal log. Points stored")
     st.dataframe(state["all_points"][["top", "left", "image", "x", "y"]])
@@ -1103,8 +1217,7 @@ if verbose:
 
 st.session_state["state"] = state
 if verbose:
-    st.text(f'len state all_points after set {len(state["all_points"])}'
-    )
+    st.text(f'len state all_points after set {len(state["all_points"])}')
 
 with view_tab:
     files = os.listdir()
@@ -1114,8 +1227,10 @@ with view_tab:
         st.image(Image.open(filename))
 
         if filename in links_dict.keys():
-            st.markdown(f"<a href=\"{links_dict[filename]}\"> <img src=\"{fb_logo}\" width=\"100\" height=\"30\"> </a>",
-              unsafe_allow_html = True)
+            st.markdown(
+                f'<a href="{links_dict[filename]}"> <img src="{fb_logo}" width="100" height="30"> </a>',
+                unsafe_allow_html=True,
+            )
         with open(filename, "rb") as file:
             btn_d = st.download_button(
                 label="Download high res image",
@@ -1125,43 +1240,59 @@ with view_tab:
                 key=f"download_button_{index}",
             )
 with gif_tab:
-    if len(state["movie_order"]) >1:
+    if len(state["movie_order"]) > 1:
         gif_cols = st.columns(len(state["movie_order"]))
-          
-        for index, choosen in enumerate(state["movie_order"]):
-          with gif_cols[index]:
-            image_filename = state["images_filenames"][choosen]
-            image = Image.open(image_filename)
-            st.image(image)
-            if index>0:
-                btn_r = st.button(
-                    label="<-",
-                    key=f"gif_right_button_{index}",
-                )
-                if btn_r:
-                  state["movie_order"][index],state["movie_order"][index-1] =  state["movie_order"][index-1],state["movie_order"][index] 
-                  st.experimental_rerun()
-        
-            if index < len(state["movie_order"])-1:
-                btn_l = st.button(
-                    label="->",
-                    key=f"gif_left_button_{index}",
-                )
-                if btn_l:
-                  state["movie_order"][index],state["movie_order"][index+1] =  state["movie_order"][index+1],state["movie_order"][index]  
-                  st.experimental_rerun()
-        state["duration_between_slides"] = st.slider("Interval between slides in ms", min_value=10, max_value=100, value=30, step=10)
+
+        for index, chosen in enumerate(state["movie_order"]):
+            with gif_cols[index]:
+                image_filename = state["images_filenames"][choosen]
+                image = Image.open(image_filename)
+                st.image(image)
+                if index > 0:
+                    btn_r = st.button(
+                        label="<-",
+                        key=f"gif_right_button_{index}",
+                    )
+                    if btn_r:
+                        state["movie_order"][index], state["movie_order"][index - 1] = (
+                            state["movie_order"][index - 1],
+                            state["movie_order"][index],
+                        )
+                        st.experimental_rerun()
+
+                if index < len(state["movie_order"]) - 1:
+                    btn_l = st.button(
+                        label="->",
+                        key=f"gif_left_button_{index}",
+                    )
+                    if btn_l:
+                        state["movie_order"][index], state["movie_order"][index + 1] = (
+                            state["movie_order"][index + 1],
+                            state["movie_order"][index],
+                        )
+                        st.experimental_rerun()
+        state["duration_between_slides"] = st.slider(
+            "Interval between slides in ms",
+            min_value=10,
+            max_value=100,
+            value=30,
+            step=10,
+        )
         if st.button("Generate Gif"):
             generating_bar_m = st.progress(0)
             temp_container = st.container()
 
-            state = generate_movie(state,pipe,verbose=verbose,
+            state = generate_movie(
+                state,
+                pipe,
+                verbose=verbose,
                 generating_bar=generating_bar_m,
                 guidance_scale=7.5,
-                temp_container = temp_container) 
+                temp_container=temp_container,
+            )
             st.experimental_rerun()
-  
-    for gif_name in state["gif_names"]:   
+
+    for gif_name in state["gif_names"]:
         file_ = open(gif_name, "rb")
         contents = file_.read()
         data_url = base64.b64encode(contents).decode("utf-8")
@@ -1180,5 +1311,3 @@ with gif_tab:
                 mime="image/gif",
                 key=f"download_gif_{gif_name}",
             )
-
-
