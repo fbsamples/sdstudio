@@ -9,12 +9,24 @@ https://gecco-2023.sigevo.org/Best-Paper-Nominations
 ## Requirements
 Google colab.
 
-
 ## Building 
 Just run and it should work, ping us if it does not :-)
 
 ## Installing 
-You can open notebook and run it in google colab  [https://github.com/fbsamples/sdstudio/main/Diffusion_Studio_0_9.ipynb](https://github.com/fbsamples/sdstudio/blob/main/Diffusion_Studio_0_9.ipynb)
+You can open notebook and run it in google colab  [notebook](https://github.com/fbsamples/sdstudio/blob/main/Diffusion_Studio_0_9.ipynb)
+
+You will be able to download dissusion-based model (some presets are also provided), generate images, select parts which you want to change, or combine several images.
+For example if you want to change mouse paw, click on it to select area.
+<img src="https://github.com/fbsamples/sdstudio/assets/7793596/78c00b04-2e55-4230-91bd-30ecd9d6b7b0"  width="600" >
+
+and then all mouse will be kept, but got new pow
+
+<img src="https://github.com/fbsamples/sdstudio/assets/7793596/b57db6cb-04c7-4f52-aa13-22934ee8bf58"  width="600" >
+
+
+We can also combine different pictures, generate animation and apply different neural network to imporve the result.
+All instruction is in the notebook.
+
 ## Authors
 Github loginss of authors: irumata (main author), teytaud, mzameshina, mathuvu, artemru
 
