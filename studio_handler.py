@@ -932,7 +932,7 @@ st.caption(
 # Initialization
 with st.sidebar:
 
-    nn_options = ["SD v2", "SD v1.4", "SD v1.4 tuned on MidJourney"]
+    nn_options = ["SD v2", "SD v1.4", "SD v1.4 tuned on MidJourney", "Download another"]
 
     nn_to_gen = st.radio(
         "Advanced: Select Neural Network",
@@ -944,7 +944,16 @@ with st.sidebar:
         open_hugging_expander = True
     else:
         open_hugging_expander = False
-
+    if nn_to_gen == "Download another":
+        open_another_expander = True
+    else:
+        open_another_expander = False
+    with st.expander("Download neural network ", open_another_expander):
+        nn_path = st.text_input(
+            label="past path from huggingface here",
+            value="stabilityai/stable-diffusion-2-inpainting",
+            help="past path for huggingface model as <vendor>/<model name> for example: stabilityai/stable-diffusion-2-inpainting",
+        )
     with st.expander("Hugging face login ", open_hugging_expander):
         header_container = st.container()
 
@@ -1019,6 +1028,8 @@ if "pipe" not in state or state["model_use_id"] != model_use_id:
             pipe_file_name = ".pipeSD"
         elif model_use_id == 2:
             pipe_file_name = ".pipeSDMJ"
+        elif model_use_id == 3:
+            pipe_file_name = ".pipeAnother"
         pipe_file = Path(pipe_file_name)
         if pipe_file.is_file():
             with open(pipe_file_name, "rb") as pipeFile:
@@ -1052,6 +1063,14 @@ if "pipe" not in state or state["model_use_id"] != model_use_id:
                     model_sd_mj = "prompthero/midjourney-v4-diffusion"
                     pipe = StableDiffusionPipeline.from_pretrained(
                         model_sd_mj,
+                        torch_dtype=torch.float16,
+                        use_auth_token=use_auth_token,
+                    )
+                elif model_use_id == 3:
+
+                    model_nn = nn_path
+                    pipe = StableDiffusionPipeline.from_pretrained(
+                        model_nn,
                         torch_dtype=torch.float16,
                         use_auth_token=use_auth_token,
                     )
