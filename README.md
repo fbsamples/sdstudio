@@ -15,8 +15,8 @@ Just run and it should work, ping us if it does not :-)
 
 ## Installing 
 You can copy the colab and/or direcrtly run it.
-https://fburl.com/sdstudio
-
+[Colab link
+](https://colab.research.google.com/drive/1HZ5jaSsHjZE_GX8bL9dQRKxYiqS5FSca?usp=sharing)
 ## Authors
 Github loginss of authors: irumata (main author), teytaud, mzameshina, mathuvu, artemru
 
