@@ -921,9 +921,9 @@ def generate_pictures(
     return state
 
 
-st.write(
-    "You can publish all these picture in [FB Ads](https://www.facebook.com/business/tools/ads-manager )"
-)
+# st.write(
+#     "You can publish all these picture in [FB Ads](https://www.facebook.com/business/tools/ads-manager )"
+# )
 st.caption(
     """If you have an error, try to "reload state" or "reset state" buttons. If UI stucks for more than 2 minutes with any reason try to reload this page and if it doesn't help - restart\
  in colab (Runtime->Restart and run all), then click on the newly created link"""
