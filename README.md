@@ -4,7 +4,8 @@ This code  can connect to several latent diffusion models, for text to image.
 Using evolutionary computation, we can combine or modify previously generated images.
 
 ## The associated paper is nominated for best paper award!
-https://gecco-2023.sigevo.org/Best-Paper-Nominations
+Paper:  https://dl.acm.org/doi/abs/10.1145/3583131.3590471
+Nomination: https://gecco-2023.sigevo.org/Best-Paper-Nominations
 
 ## Requirements
 Google colab.
