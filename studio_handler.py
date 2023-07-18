@@ -1078,7 +1078,7 @@ if "pipe" not in state or state["model_use_id"] != model_use_id:
                     st.error("bad model id")
             except:
                 e = RuntimeError(
-                    "Problem with Diffusion downolading, please paste huggingface token to the left box"
+                    "Problem with Diffusion downloading, please paste huggingface token in the box under << HuggingFace login >> on the left"
                 )
                 st.exception(e)
                 st.stop()
