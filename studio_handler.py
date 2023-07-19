@@ -1092,7 +1092,7 @@ else:
 pipe = pipe.to("cuda")
 
 create_tab, view_tab, gif_tab = st.tabs(
-    ["Images to generate", "High-resolution images", "Animation generation"]
+    ["Images to generate", "High-resolution images (select one image first)", "Animation generation (select two images first)"]
 )
 with create_tab:
 
