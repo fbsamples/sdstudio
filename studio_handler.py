@@ -956,16 +956,16 @@ with st.sidebar:
         )
     with st.expander("Hugging face login ", open_hugging_expander):
         header_container = st.container()
-
-        st.caption(
-            "Instead of storing token each time you also can login to hugging face in colab"
-        )
-        state["colab_login"] = st.checkbox("Use colab login to hugging face")
-        try:
-            with open(".hugging_token", "rb") as handle:
-                state["token"] = joblib.load(handle)
-        except:
-            pass
+# login from colab temporary off
+        # st.caption(
+        #     "Instead of storing token each time you also can login to hugging face in colab"
+        # )
+        # state["colab_login"] = st.checkbox("Use colab login to hugging face")
+        # try:
+        #     with open(".hugging_token", "rb") as handle:
+        #         state["token"] = joblib.load(handle)
+        # except:
+        #     pass
 
         with header_container:
             if "colab_login" not in state or state["colab_login"] == False:
