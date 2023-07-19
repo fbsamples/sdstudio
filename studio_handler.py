@@ -1264,7 +1264,7 @@ with gif_tab:
 
         for index, chosen in enumerate(state["movie_order"]):
             with gif_cols[index]:
-                image_filename = state["images_filenames"][choosen]
+                image_filename = state["images_filenames"][chosen]
                 image = Image.open(image_filename)
                 st.image(image)
                 if index > 0:
