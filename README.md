@@ -14,7 +14,7 @@ Google colab.
 Just run and it should work, ping us if it does not :-)
 
 ## Installing 
-You can open notebook and run it in google colab  [notebook](https://github.com/fbsamples/sdstudio/blob/main/Diffusion_Studio_0_9.ipynb)
+You can open notebook and run it in google colab  [notebook](https://colab.research.google.com/github/fbsamples/sdstudio/blob/main/Diffusion_Studio_0_9.ipynb)
 
 You will be able to download dissusion-based model (some presets are also provided), generate images, select parts which you want to change, or combine several images.
 For example if you want to change mouse paw, click on it to select area.
