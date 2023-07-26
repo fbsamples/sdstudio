@@ -670,7 +670,7 @@ def generate_pictures(
             latent_base = state["images_latents"][chosen[0]]
             state["sigma"] *= SIGMA_REDUCTION_PER_CHOICE
     if len(preserved_latent) > 1:
-        assert len(chosen) == len(preserved_latent)
+        assert len(chosen) >= len(preserved_latent)
         num_points = [len(state["all_points"][state["all_points"]["image"] == c]) for c in chosen]
         voronoi = len(state["all_points"]) > 1 and min(num_points) > 0
         # We can do Voronoi only if we have points on each selected image.
