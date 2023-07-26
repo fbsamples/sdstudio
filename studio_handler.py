@@ -594,7 +594,7 @@ def generate_pictures(
         for i in range(len(state["images_latents"]))
         if i not in state["total_choosen"]
     ]
-    st.text("ready to generation")
+    st.text("ready to generate")
 
     if len(preserved_latent) == 1:
         if len(state["polygons"]) > 0:
@@ -670,8 +670,12 @@ def generate_pictures(
             latent_base = state["images_latents"][chosen[0]]
             state["sigma"] *= SIGMA_REDUCTION_PER_CHOICE
     if len(preserved_latent) > 1:
-        voronoi = len(state["all_points"]) > 1
+        assert len(chosen) >= len(preserved_latent)
+        num_points = [len(state["all_points"][state["all_points"]["image"] == c]) for c in chosen]
+        voronoi = len(state["all_points"]) > 1 and min(num_points) > 0
+        # We can do Voronoi only if we have points on each selected image.
         if voronoi:
+            st.text(f"We apply a Voronoi crossover between {len(num_points)} images with {num_points} points per image.")
             state["no_ml"] = True
 
             latent_basev = []
@@ -680,11 +684,12 @@ def generate_pictures(
                     st.text("here 3")
                 latent_base = state["images_latents"][chosen[0]].clone()
                 b = len(preserved_images)
-                correction_multiplier = 1.1
+                # correction_multiplier = 1.1
                 correction_multiplier = state["correction_multiplier"] / 4
-                ratio = 1.0 + correction_multiplier * 0.25 * (
-                    (idx) / (1e-5 + llambda - b - 1.0)
-                )
+                #ratio = 1.0 + correction_multiplier * 0.25 * (
+                #    (idx) / (1e-5 + llambda - b - 1.0)
+                #)
+                ratio = 1. + (idx / llambda)
 
                 # ratio = 1.0 + 0.25 * ((idx - b) / (1e-5 + llambda - b - 1.0))
                 choices = []
@@ -726,19 +731,19 @@ def generate_pictures(
                         ]
                         if (
                             sorted_dist[0] > sorted_dist[1] / ratio
-                            and sorted_dist[0] > min_radius
+                            #and sorted_dist[0] > min_radius  # This implies that with several points there is no randomness anymore; 0.3 is big.
                         ):
                             randomized += 1
                             choosen_dict["random"] += 1
                             latent_base[0, :, u, v] = torch.randn((4))
                 if verbose:
                     st.text(f"idx {idx} randomized {randomized} chosen {choosen_dict}")
+                assert randomized > 0 or llambda == 1
                 latent_basev += [latent_base]
 
         else:
-
             if verbose:
-                st.text("here half")
+                st.text(f"Here we consider the global average of images! {chosen}")
             latent_base = torch.mean(
                 torch.stack([state["images_latents"][i].to("cuda") for i in chosen]),
                 0,
