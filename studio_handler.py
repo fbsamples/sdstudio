@@ -60,6 +60,7 @@ SIGMA_REDUCTION_PER_CHOICE = 0.7
 MINIMUM_BAD_NUMBER_FOR_MLP = 10
 POINT_COLUMNS = ["top", "left", "image", "x", "y"]
 DEVICE = "cuda"
+loading_image ="https://newsandstory.com/tempImage/15121520094520186903.jpg"
 # 0-sd 1 -sdmj
 from typing import Callable, List, Optional, Union
 
@@ -455,7 +456,7 @@ def generate_movie(
             st.caption(f"{type(res_img)} {res_img.size}")
             result_pictures.append(res_img)
             if generating_bar is not None:
-                generating_bar.progress(1 / total_images)
+                generating_bar.progress(0.8 / total_images)
         first_picture_index = pict_index
     result_pictures.append(state["imagev"][state["movie_order"][-1]])
     st.caption(
@@ -803,7 +804,7 @@ def generate_pictures(
         )
         tclf = clf.fit(good + bad, [1] * len(good) + [0] * len(bad))
     if generating_bar is not None:
-        generating_bar.progress(1 / (len(latentv) + 1))
+        generating_bar.progress(0.8 / (len(latentv) + 1))
     total_count = len(state["imagev"]) + llambda
     # state["imagev"] += [ None] * llambda
     # state["images_filenames"] += [ None] * llambda
@@ -918,7 +919,9 @@ def generate_pictures(
         if verbose:
             st.text(f'image latents last { state["images_latents"][-1].shape}')
         if generating_bar is not None:
-            generating_bar.progress((i + 2) / (len(latentv) + 1))
+            step = 1/(len(latentv)+1)
+            start = 2*step
+            generating_bar.progress(start + 0.8*i*step)
     state["used_indexes"] = []
     state["all_points"] = []
     with open(".state", "wb") as f:
@@ -1095,7 +1098,7 @@ if "pipe" not in state or state["model_use_id"] != model_use_id:
 else:
     pipe = state["pipe"]
 pipe = pipe.to("cuda")
-
+progress_container = st.container()
 create_tab, view_tab, gif_tab = st.tabs(
     ["Images to generate", "High-resolution images (select one image first)", "Animation generation (select two images first)"]
 )
@@ -1187,7 +1190,7 @@ with create_tab:
         st.caption(
             "generation progress may take several minutes, depends on GPU allocation and image number"
         )
-        generating_bar = st.progress(0)
+        generating_bar = progress_container.progress(0)
         state = generate_pictures(
             state,
             pipe=pipe,
