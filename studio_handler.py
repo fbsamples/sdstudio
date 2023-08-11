@@ -60,7 +60,7 @@ SIGMA_REDUCTION_PER_CHOICE = 0.7
 MINIMUM_BAD_NUMBER_FOR_MLP = 10
 POINT_COLUMNS = ["top", "left", "image", "x", "y"]
 DEVICE = "cuda"
-loading_image ="https://newsandstory.com/tempImage/15121520094520186903.jpg"
+loading_image = "https://newsandstory.com/tempImage/15121520094520186903.jpg"
 # 0-sd 1 -sdmj
 from typing import Callable, List, Optional, Union
 
@@ -672,11 +672,15 @@ def generate_pictures(
             state["sigma"] *= SIGMA_REDUCTION_PER_CHOICE
     if len(preserved_latent) > 1:
         assert len(chosen) >= len(preserved_latent)
-        num_points = [len(state["all_points"][state["all_points"]["image"] == c]) for c in chosen]
+        num_points = [
+            len(state["all_points"][state["all_points"]["image"] == c]) for c in chosen
+        ]
         voronoi = len(state["all_points"]) > 1 and min(num_points) > 0
         # We can do Voronoi only if we have points on each selected image.
         if voronoi:
-            st.text(f"We apply a Voronoi crossover between {len(num_points)} images with {num_points} points per image.")
+            st.text(
+                f"We apply a Voronoi crossover between {len(num_points)} images with {num_points} points per image."
+            )
             state["no_ml"] = True
 
             latent_basev = []
@@ -687,10 +691,10 @@ def generate_pictures(
                 b = len(preserved_images)
                 # correction_multiplier = 1.1
                 correction_multiplier = state["correction_multiplier"] / 4
-                #ratio = 1.0 + correction_multiplier * 0.25 * (
+                # ratio = 1.0 + correction_multiplier * 0.25 * (
                 #    (idx) / (1e-5 + llambda - b - 1.0)
-                #)
-                ratio = 1. + (idx / llambda)
+                # )
+                ratio = 1.0 + (idx / llambda)
 
                 # ratio = 1.0 + 0.25 * ((idx - b) / (1e-5 + llambda - b - 1.0))
                 choices = []
@@ -731,8 +735,9 @@ def generate_pictures(
                             0, :, u, v
                         ]
                         if (
-                            sorted_dist[0] > sorted_dist[1] / ratio
-                            #and sorted_dist[0] > min_radius  # This implies that with several points there is no randomness anymore; 0.3 is big.
+                            sorted_dist[0]
+                            > sorted_dist[1] / ratio
+                            # and sorted_dist[0] > min_radius  # This implies that with several points there is no randomness anymore; 0.3 is big.
                         ):
                             randomized += 1
                             choosen_dict["random"] += 1
@@ -919,9 +924,9 @@ def generate_pictures(
         if verbose:
             st.text(f'image latents last { state["images_latents"][-1].shape}')
         if generating_bar is not None:
-            step = 1/(len(latentv)+1)
-            start = 2*step
-            generating_bar.progress(start + 0.8*i*step)
+            step = 1 / (len(latentv) + 1)
+            start = 2 * step
+            generating_bar.progress(start + 0.8 * i * step)
     state["used_indexes"] = []
     state["all_points"] = []
     with open(".state", "wb") as f:
@@ -964,7 +969,7 @@ with st.sidebar:
         )
     with st.expander("Hugging face login ", open_hugging_expander):
         header_container = st.container()
-# login from colab temporary off
+        # login from colab temporary off
         # st.caption(
         #     "Instead of storing token each time you also can login to hugging face in colab"
         # )
@@ -1008,6 +1013,39 @@ with st.sidebar:
     state["load_inpaint"] = st.checkbox(
         "download inpaint NN (may need colab pro version with additional memory)"
     )
+with st.sidebar:
+    st.caption("""This checkbox for cases without good outcome.""")
+    no_ml_checkbox = st.checkbox(
+        "Use surrogate ML model based on your previous clicks. "
+    )
+    llambda = st.slider("How many pictures generate?", 1, 20, 4)
+
+    correction_multiplier = st.slider(
+        "How huge radius accross the point we should use", 1, 10, 2
+    )
+    state["correction_multiplier"] = correction_multiplier
+    state["llambda"] = llambda
+    refresh_button = st.button("Reload last state")
+    if refresh_button:
+        state["refreshes"] = 1
+        with open(".state", "rb") as f:
+            state = joblib.load(f)
+    reset_bt = st.button("Reset state")
+    if reset_bt:
+        state = generate_state(prompt=prompt)
+        state["state"] = state
+    verbose = st.checkbox("verbose mode for testing", False)
+    state["verbose"] = verbose
+    state["same_z"] = st.checkbox(
+        "Create new picture exactly similar to the selected picture"
+    )
+
+    drawing_mode = "point"
+    if state["load_inpaint"]:
+        drawing_mode = st.sidebar.selectbox("Drawing tool:", ("point", "polygon"))
+
+    change_selected = st.sidebar.selectbox("Selected area :", ("change", "save"))
+    state["change_selected"] = change_selected
 
 # make sure you're logged in with `huggingface-cli login`
 if state["load_inpaint"]:
@@ -1027,7 +1065,7 @@ if state["load_inpaint"]:
     else:
         pipe_inpaint = state["pipe_inpaint"]
     pipe_inpaint = pipe_inpaint.to("cuda")
-if "pipe" not in state or state["model_use_id"] != model_use_id:
+if nn_to_gen + "pipe" not in state or state["model_use_id"] != model_use_id:
     with st.spinner("Downloading Diffusion data. It would take about 40 seconds."):
         if model_use_id == 0:
             pipe_file_name = ".pipeSD2"
@@ -1043,13 +1081,14 @@ if "pipe" not in state or state["model_use_id"] != model_use_id:
             with open(pipe_file_name, "rb") as pipeFile:
                 pipe = joblib.load(pipeFile)
         else:
+            use_auth_token = (
+                True
+                if "token" not in state
+                or ("colab_login" in state and state["colab_login"])
+                else state["token"]
+            )
             try:
 
-                use_auth_token = (
-                    True
-                    if "token" not in state or state["colab_login"]
-                    else state["token"]
-                )
                 if model_use_id == 0:
                     model_sd2 = "stabilityai/stable-diffusion-2-base"
                     pipe = StableDiffusionPipeline.from_pretrained(
@@ -1060,6 +1099,9 @@ if "pipe" not in state or state["model_use_id"] != model_use_id:
                     )
                 elif model_use_id == 1:
                     model_sd = "CompVis/stable-diffusion-v1-4"
+                    if state["verbose"]:
+                        st.text(f"using token {use_auth_token}")
+
                     pipe = StableDiffusionPipeline.from_pretrained(
                         model_sd,
                         revision="fp16",
@@ -1084,9 +1126,14 @@ if "pipe" not in state or state["model_use_id"] != model_use_id:
                     )
                 else:
                     st.error("bad model id")
-            except:
+            except Exception:
+                token_to_print = (
+                    ""
+                    if type(use_auth_token) is bool
+                    else f"current token {use_auth_token}"
+                )
                 e = RuntimeError(
-                    "Problem with Diffusion downloading, please paste huggingface token in the box under << HuggingFace login >> on the left"
+                    f"Problem with Diffusion downloading, please paste huggingface token in the box under << HuggingFace login >> on the left  {token_to_print}"
                 )
                 st.exception(e)
                 st.stop()
@@ -1094,13 +1141,17 @@ if "pipe" not in state or state["model_use_id"] != model_use_id:
                 joblib.dump(pipe, f)
 
         state["model_use_id"] = model_use_id
-        state["pipe"] = pipe
+        state[nn_to_gen + "pipe"] = pipe
 else:
-    pipe = state["pipe"]
+    pipe = state[nn_to_gen + "pipe"]
 pipe = pipe.to("cuda")
 progress_container = st.container()
 create_tab, view_tab, gif_tab = st.tabs(
-    ["Images to generate", "High-resolution images (select one image first)", "Animation generation (select two images first)"]
+    [
+        "Images to generate",
+        "High-resolution images (select one image first)",
+        "Animation generation (select two images first)",
+    ]
 )
 with create_tab:
 
@@ -1128,40 +1179,6 @@ with create_tab:
     with header_col2:
         regenerate_button = st.button("Generate")
         # st.caption("if page stuck")
-
-    with st.sidebar:
-        st.caption("""This checkbox for cases without good outcome.""")
-        no_ml_checkbox = st.checkbox(
-            "Use surrogate ML model based on your previous clicks. "
-        )
-        llambda = st.slider("How many pictures generate?", 1, 20, 4)
-
-        correction_multiplier = st.slider(
-            "How huge radius accross the point we should use", 1, 10, 2
-        )
-        state["correction_multiplier"] = correction_multiplier
-        state["llambda"] = llambda
-        refresh_button = st.button("Reload last state")
-        if refresh_button:
-            state["refreshes"] = 1
-            with open(".state", "rb") as f:
-                state = joblib.load(f)
-        reset_bt = st.button("Reset state")
-        if reset_bt:
-            state = generate_state(prompt=prompt)
-            state["state"] = state
-        verbose = st.checkbox("verbose mode for testing", False)
-        state["verbose"] = verbose
-        state["same_z"] = st.checkbox(
-            "Create new picture exactly similar to the selected picture"
-        )
-
-        drawing_mode = "point"
-        if state["load_inpaint"]:
-            drawing_mode = st.sidebar.selectbox("Drawing tool:", ("point", "polygon"))
-
-        change_selected = st.sidebar.selectbox("Selected area :", ("change", "save"))
-        state["change_selected"] = change_selected
 
     with st.expander("How to guide the next generation of images"):
         st.caption(
