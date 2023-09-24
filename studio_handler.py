@@ -933,11 +933,13 @@ def generate_pictures(
         joblib.dump(state, f)
     return state
 
+head_container = st.container()
 
 # st.write(
 #     "You can publish all these picture in [FB Ads](https://www.facebook.com/business/tools/ads-manager )"
 # )
-st.caption(
+
+head_container.caption(
     """If you have an error, try to "reload last state" or "reset state" buttons. If UI stucks for more than 2 minutes with any reason try to reload this page and if it doesn't help - restart\
  in colab (Runtime->Restart and run all), then click on the newly created link"""
 )
@@ -1145,7 +1147,6 @@ if nn_to_gen + "pipe" not in state or state["model_use_id"] != model_use_id:
 else:
     pipe = state[nn_to_gen + "pipe"]
 pipe = pipe.to("cuda")
-progress_container = st.container()
 create_tab, view_tab, gif_tab = st.tabs(
     [
         "Images to generate",
@@ -1207,7 +1208,7 @@ with create_tab:
         st.caption(
             "generation progress may take several minutes, depends on GPU allocation and image number"
         )
-        generating_bar = progress_container.progress(0)
+        generating_bar = head_container.progress(0)
         state = generate_pictures(
             state,
             pipe=pipe,
