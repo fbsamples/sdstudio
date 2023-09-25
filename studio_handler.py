@@ -701,12 +701,17 @@ def generate_pictures(
                 choosen_dict = {"random": 0}
                 randomized = 0
                 min_radius = 0.3
+                assert state["resolution"] > 0
                 for u in range(state["resolution"]):
                     xu = (u + 0.5) / float(state["resolution"])
+                    assert xu >= 0
+                    assert xu < 1
                     for v in range(state["resolution"]):
                         xv = (v + 0.5) / float(state["resolution"])
+                        assert xv >= 0
+                        assert xv < 1
                         dist = []
-
+                        assert chosen > 0
                         for i, c in enumerate(chosen):
                             dists_point = [
                                 np.linalg.norm(
@@ -737,14 +742,15 @@ def generate_pictures(
                         if (
                             sorted_dist[0]
                             > sorted_dist[1] / ratio
+                            or sorted_dist[0] < 2. / float(state["resolution"])
                             # and sorted_dist[0] > min_radius  # This implies that with several points there is no randomness anymore; 0.3 is big.
                         ):
-                            randomized += 1
+                            randomized += 1  # Let us count the number of randomized points.
                             choosen_dict["random"] += 1
                             latent_base[0, :, u, v] = torch.randn((4))
                 if verbose:
                     st.text(f"idx {idx} randomized {randomized} chosen {choosen_dict}")
-                assert randomized > 0 or llambda == 1
+                assert randomized > 0 or llambda == 1, f"Not a single point is randomized ? Ratio={ratio}, sorted_dist={sorted_dist}"
                 latent_basev += [latent_base]
 
         else:
