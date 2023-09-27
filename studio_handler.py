@@ -2,6 +2,7 @@
 
 # NEED TO BE REFACTOR
 
+import datetime
 import os
 
 os.environ["PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION"] = "python"
@@ -595,9 +596,10 @@ def generate_pictures(
         for i in range(len(state["images_latents"]))
         if i not in state["total_choosen"]
     ]
-    st.text("ready to generate")
+    st.text("ready to generate, at time {datetime.datetime.now()}")
 
     if len(preserved_latent) == 1:
+        st.text("We work from a single selected image")
         if len(state["polygons"]) > 0:
             if verbose:
                 st.text("INPAINT")
@@ -615,11 +617,11 @@ def generate_pictures(
                 preserved_latent,
             )
         if verbose:
-
             st.text("no inpaint")
-
             st.text(f'len state all_points {len(state["all_points"])}')
+
         if len(state["all_points"]) > 0:
+            st.text(f"The user selected {len(state['all_points'])} points")
             state["no_ml"] = True
             image_to_pick = state["imagev"][chosen[0]]
             clicks_df = state["all_points"][state["all_points"]["image"] == chosen[0]]
@@ -627,7 +629,7 @@ def generate_pictures(
                 np.array((point["x"], point["y"])) for _, point in clicks_df.iterrows()
             ]
             if verbose:
-                st.text(f"clicks {len(clicks)} {clicks}")
+                st.text(f"{len(clicks)} clicks, namely {clicks}")
             if (
                 len(clicks) > 0
             ):  # Here we create llambda images, corresponding to the chosen image + local modifications at the clicks.
@@ -662,14 +664,14 @@ def generate_pictures(
                     latent_basev.append(base)
             else:
                 if verbose:
-                    st.text("here 2")
+                    st.text("The user did not select any point in the images, global mutations.")
                 latent_base = state["images_latents"][chosen[0]]
                 state["sigma"] *= SIGMA_REDUCTION_PER_CHOICE
         else:
             if verbose:
-                st.text("here 1")
+                st.text("Nothing selected!")
             latent_base = state["images_latents"][chosen[0]]
-            state["sigma"] *= SIGMA_REDUCTION_PER_CHOICE
+            #state["sigma"] *= SIGMA_REDUCTION_PER_CHOICE
     if len(preserved_latent) > 1:
         assert len(chosen) >= len(preserved_latent)
         num_points = [
@@ -686,7 +688,7 @@ def generate_pictures(
             latent_basev = []
             for idx in range(llambda):
                 if verbose:
-                    st.text("here 3")
+                    st.text(f"We generate image {idx}")
                 latent_base = state["images_latents"][chosen[0]].clone()
                 b = len(preserved_images)
                 # correction_multiplier = 1.1
@@ -764,11 +766,11 @@ def generate_pictures(
 
     latentv = []
     if verbose:
-        st.text(f"llambda {llambda}")
+        st.text(f"llambda={llambda}")
 
     if latent_basev is not None:  # We have already created a batch of latent.
         if verbose:
-            st.text(f"setted new latinv and latent_basev from scratch")
+            st.text(f"set new latentv and latent_basev from scratch")
         latentv = latent_basev
         latent_basev = None
     else:
@@ -777,7 +779,7 @@ def generate_pictures(
         latentv = []
 
         if not state["same_z"]:
-
+            st.text(f"All z are perturbated")
             for i in range(llambda):
 
                 if latent_base is None:
@@ -786,7 +788,7 @@ def generate_pictures(
                     ).half()
                 else:
                     if verbose:
-                        st.text(f"setted new latinv from latent_base ")
+                        st.text(f"setted new latent from latent_base ")
                     latents = latent_base.to("cuda") + state["sigma"] * (
                         (i + 1) / (llambda + 1)
                     ) * torch.randn(
@@ -803,7 +805,7 @@ def generate_pictures(
             if latent_base is None:
                 st.error("Can't build similar to this type of pictures choice")
             if verbose:
-                st.text("here to print")
+                st.text("Let us add latent_base")
             latentv += [latent_base.to("cuda")]
     if len(bad) < MINIMUM_BAD_NUMBER_FOR_MLP or len(good) == 0:
         state["no_ml"] = True
@@ -845,7 +847,9 @@ def generate_pictures(
             "no_ml"
         ]:  # We are doing machine learning, a surrogate model and so on.
             use_rs = False
+            st.text("Applying machine learning, i.e. a surrogate model.")
             if use_rs:
+                st.text("Applying random search")
                 opt = ng.optimizers.registry["RandomSearch"](
                     4 * state["resolution"] * state["resolution"],
                     budget=7,
@@ -867,6 +871,7 @@ def generate_pictures(
                 recom = opt.recommend().value
                 recom = (np.sqrt(len(recom)) / np.linalg.norm(recom)) * recom
             else:
+                st.text("Applying differential evolution")
                 opt = ng.optimizers.registry["DE"](
                     4 * state["resolution"] * state["resolution"],
                     budget=20 + i * 3,
@@ -1007,7 +1012,7 @@ with st.sidebar:
                 token = st.text_input(
                     label="copy your hugging face token here",
                     value="",
-                    help="paste your toke here",
+                    help="paste your token here",
                 )
                 if len(token) > 5:
                     state["token"] = token
@@ -1026,7 +1031,7 @@ with st.sidebar:
     no_ml_checkbox = st.checkbox(
         "Use surrogate ML model based on your previous clicks. "
     )
-    llambda = st.slider("How many pictures generate?", 1, 20, 4)
+    llambda = st.slider("How many pictures should we generate?", 1, 20, 4)
 
     correction_multiplier = st.slider(
         "How huge radius accross the point we should use", 1, 10, 2
@@ -1045,7 +1050,7 @@ with st.sidebar:
     verbose = st.checkbox("verbose mode for testing", False)
     state["verbose"] = verbose
     state["same_z"] = st.checkbox(
-        "Create new picture exactly similar to the selected picture"
+        "Create a new picture exactly similar to the selected picture (up to prompt variations)"
     )
 
     drawing_mode = "point"
@@ -1212,7 +1217,7 @@ with create_tab:
             containers.insert(0, cont)
     if regenerate_button:
         st.caption(
-            "generation progress may take several minutes, depends on GPU allocation and image number"
+            "generation progress may take several minutes, depends on GPU allocation and number of images"
         )
         generating_bar = head_container.progress(0)
         state = generate_pictures(
