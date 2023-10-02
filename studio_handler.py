@@ -310,7 +310,7 @@ def show_picture(state, image_index, points, used_indexes_flatten, preview=False
     width, height = (WIDTH_RESOLUTION, HEIGHT_RESOLUTION)
     if not preview:
         used_indexes_flatten[image_index] = st.checkbox(
-            "use this image to next generation",
+            "Inspiration from this image",
             image_index in state["used_indexes"],
             key=f"checkbox_{image_index}",
         )
@@ -596,7 +596,7 @@ def generate_pictures(
         for i in range(len(state["images_latents"]))
         if i not in state["total_choosen"]
     ]
-    st.text("ready to generate, at time {datetime.datetime.now()}")
+    st.text(f"ready to generate, at time {datetime.datetime.now()}")
 
     if len(preserved_latent) == 1:
         st.text("We work from a single selected image")
@@ -951,7 +951,22 @@ head_container = st.container()
 # )
 
 head_container.caption(
-    """If you have an error, try to "reload last state" or "reset state" buttons. If UI stucks for more than 2 minutes with any reason try to reload this page and if it doesn't help - restart\
+    """
+ How to guide the processus:\n
+
+ - you can modify the text (prompt) below\n
+
+ - you can click on some boxes "Inspiration from this image" for guiding the search.\n
+
+ - if you just click ONE box, next images will be more similar to that one. If you repeatedly prefer the same image, the variations will become closer to that image.\n
+
+ - if you click ONE box and parts of the same image, the next images will be similar EXCEPT where you click (if you choose CHANGE in the CHANGE section).\n
+
+ - if you click ONE box and parts of the same image, the next images will be similar MOSTLY where you click (if you choose SAVE in the CHANGE section).\n
+
+ - if you click AT LEAST TWO boxes (two different images), they will be combined. Clicks on the image indicate the parts you want to keep.\n
+
+ If you have an error, try to "reload last state" or "reset state" buttons. If UI stucks for more than 2 minutes with any reason try to reload this page and if it doesn't help - restart\
  in colab (Runtime->Restart and run all), then click on the newly created link"""
 )
 
