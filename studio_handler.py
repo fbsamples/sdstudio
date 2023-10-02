@@ -57,7 +57,7 @@ model_use_id = 1
 MIN_TOKEN_LENGTH = 16
 HEIGHT_RESOLUTION = 512
 WIDTH_RESOLUTION = 512
-SIGMA_REDUCTION_PER_CHOICE = 0.7
+SIGMA_REDUCTION_PER_CHOICE = 0.4
 MINIMUM_BAD_NUMBER_FOR_MLP = 10
 POINT_COLUMNS = ["top", "left", "image", "x", "y"]
 DEVICE = "cuda"
@@ -576,6 +576,7 @@ def generate_pictures(
     llambda = state["llambda"]
     state["total_choosen"].update(state["used_indexes"])
     for choice in state["used_indexes"]:
+        st.text(f"We have {choice} in our choices")
         if choice not in chosen:
             preserved_latent += [state["images_latents"][choice]]  # [latentv[choice]]
             preserved_images += [state["imagev"][choice]]
@@ -668,6 +669,7 @@ def generate_pictures(
                     st.text("The user did not select any point in the images, global mutations of a single image.")
                 latent_base = state["images_latents"][chosen[0]]
                 state["sigma"] *= SIGMA_REDUCTION_PER_CHOICE
+                st.text(f"We reduce the variation rate, now at {state['sigma']}")
         else:
             if verbose:
                 st.text("The user did not select any point in the images, global mutations of a single image.")
@@ -1064,7 +1066,7 @@ with st.sidebar:
     if reset_bt:
         state = generate_state(prompt=prompt)
         state["state"] = state
-    verbose = st.checkbox("verbose mode for testing", False)
+    verbose = st.checkbox("verbose mode for testing", True)
     state["verbose"] = verbose
     state["same_z"] = st.checkbox(
         "Create a new picture exactly similar to the selected picture (up to prompt variations)"
