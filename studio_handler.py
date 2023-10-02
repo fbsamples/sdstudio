@@ -960,9 +960,9 @@ head_container.caption(
 
  - if you just click ONE box, next images will be more similar to that one. If you repeatedly prefer the same image, the variations will become closer to that image.\n
 
- - if you click ONE box and parts of the same image, the next images will be similar EXCEPT where you click (if you choose CHANGE in the CHANGE section).\n
+ - if you click ONE box and parts of the same image, the next images will be similar EXCEPT where you click (if you choose CHANGE in the CHANGE section). Generated images will be a mix of similar images and completly diffeent images.\n
 
- - if you click ONE box and parts of the same image, the next images will be similar MOSTLY where you click (if you choose SAVE in the CHANGE section).\n
+ - if you click ONE box and parts of the same image, the next images will be similar MOSTLY where you click (if you choose SAVE in the CHANGE section). Generated images will be a mix of similar images and completly diffeent images.\n
 
  - if you click AT LEAST TWO boxes (two different images), they will be combined. Clicks on the image indicate the parts you want to keep.\n
 
