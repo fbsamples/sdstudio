@@ -674,6 +674,8 @@ def generate_pictures(
             if verbose:
                 st.text("The user did not select any point in the images, global mutations of a single image.")
             latent_base = state["images_latents"][chosen[0]]
+            state["sigma"] *= SIGMA_REDUCTION_PER_CHOICE
+            st.text(f"We reduce the variation rate, now at {state['sigma']}")
             #state["sigma"] *= SIGMA_REDUCTION_PER_CHOICE
     elif len(preserved_latent) > 1:
         assert len(chosen) >= len(preserved_latent)
