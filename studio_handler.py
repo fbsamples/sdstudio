@@ -903,7 +903,7 @@ def generate_pictures(
             st.text(f"generating latents {latents.shape}")
         # Here we call SD. This uses the GPU and takes a bit of time.
         if pipe is not None:
-            image = pipe(prompt=state["prompt"], latents=latents).images[0]
+            image = pipe(prompt=state["prompt"], latents=latents.half()).images[0]
             # image_index = total_count - i - 1
             image_index = len(state["imagev"])
             image_name = "image_{}.png".format(image_index)
