@@ -453,7 +453,7 @@ def generate_movie(
                 with temp_container:
                     st.caption(f"image #{gen_index}")
                     st.image(res_img)
-                    st.write(st.dg)
+                    #st.write(st.dg)
             st.caption(f"{type(res_img)} {res_img.size}")
             result_pictures.append(res_img)
             if generating_bar is not None:
@@ -580,6 +580,7 @@ def generate_pictures(
             preserved_latent += [state["images_latents"][choice]]  # [latentv[choice]]
             preserved_images += [state["imagev"][choice]]
         chosen += [choice]
+    st.text(f"We keep {len(preserved_latent)} inspirational images, from {len(chosen)} clicks.")
     good = [
         short(
             state["images_latents"][i].cpu().detach().numpy().flatten(),
@@ -621,7 +622,7 @@ def generate_pictures(
             st.text(f'len state all_points {len(state["all_points"])}')
 
         if len(state["all_points"]) > 0:
-            st.text(f"The user selected {len(state['all_points'])} points")
+            st.text(f"The user selected {len(state['all_points'])} points, all in a same image.")
             state["no_ml"] = True
             image_to_pick = state["imagev"][chosen[0]]
             clicks_df = state["all_points"][state["all_points"]["image"] == chosen[0]]
@@ -664,15 +665,15 @@ def generate_pictures(
                     latent_basev.append(base)
             else:
                 if verbose:
-                    st.text("The user did not select any point in the images, global mutations.")
+                    st.text("The user did not select any point in the images, global mutations of a single image.")
                 latent_base = state["images_latents"][chosen[0]]
                 state["sigma"] *= SIGMA_REDUCTION_PER_CHOICE
         else:
             if verbose:
-                st.text("Nothing selected!")
+                st.text("The user did not select any point in the images, global mutations of a single image.")
             latent_base = state["images_latents"][chosen[0]]
             #state["sigma"] *= SIGMA_REDUCTION_PER_CHOICE
-    if len(preserved_latent) > 1:
+    elif len(preserved_latent) > 1:
         assert len(chosen) >= len(preserved_latent)
         num_points = [
             len(state["all_points"][state["all_points"]["image"] == c]) for c in chosen
@@ -731,10 +732,10 @@ def generate_pictures(
                             e = RuntimeError("Not enoght points selected")
                             st.exception(e)
                             st.stop()
-                        if state["change_selected"] == "save":
-                            choice = chosen[int(np.argmin(dist))]
-                        elif state["change_selected"] == "change":
-                            choice = chosen[int(np.argmax(dist))]
+                        #if state["change_selected"] == "save":
+                        choice = chosen[int(np.argmin(dist))]
+                        #elif state["change_selected"] == "change":
+                        #    choice = chosen[int(np.argmax(dist))]
 
                         choosen_dict[str(choice)] = choosen_dict.get(str(choice), 0) + 1
                         choices += [choice]
@@ -960,9 +961,9 @@ head_container.caption(
 
  - if you just click ONE box, next images will be more similar to that one. If you repeatedly prefer the same image, the variations will become closer to that image.\n
 
- - if you click ONE box and parts of the same image, the next images will be similar EXCEPT where you click (if you choose CHANGE in the CHANGE section). Generated images will be a mix of similar images and completly diffeent images.\n
+ - if you click ONE box and parts of the same image, the next images will be similar EXCEPT where you click (if you choose CHANGE in the SELECTED-AREA section). Generated images will be a mix of similar images and completly diffeent images.\n
 
- - if you click ONE box and parts of the same image, the next images will be similar MOSTLY where you click (if you choose SAVE in the CHANGE section). Generated images will be a mix of similar images and completly diffeent images.\n
+ - if you click ONE box and parts of the same image, the next images will be similar MOSTLY where you click (if you choose SAVE in the SELECTED-AREA section). Generated images will be a mix of similar images and completly diffeent images.\n
 
  - if you click AT LEAST TWO boxes (two different images), they will be combined. Clicks on the image indicate the parts you want to keep.\n
 
