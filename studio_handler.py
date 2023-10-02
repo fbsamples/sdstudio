@@ -790,9 +790,9 @@ def generate_pictures(
                 else:
                     if verbose:
                         st.text(f"setted new latent from latent_base ")
-                    latents = latent_base.to("cuda") + state["sigma"] * (
+                    latents = latent_base.to("cuda") + state["sigma"] * ((
                         (i + 1) / (llambda + 1)
-                    ) * torch.randn(
+                    )**2) * torch.randn(
                         (1, 4, state["resolution"], state["resolution"])
                     ).half().to(
                         "cuda"
@@ -955,17 +955,18 @@ head_container.caption(
     """
  How to guide the processus:\n
 
- - you can modify the text (prompt) below\n
+ - you can :red[modify the text (prompt)] below at any time\n
 
- - you can click on some boxes "Inspiration from this image" for guiding the search.\n
+ - you can :red[click on some boxes "Inspiration from this image"] for guiding the search, with impact as explained below.\n
 
- - if you just click ONE box, next images will be more similar to that one. If you repeatedly prefer the same image, the variations will become closer to that image.\n
+ - if you just :red[click ONE box], next images will be more similar to that one. If you repeatedly prefer the same image, the variations will become closer to that image.\n
 
- - if you click ONE box and parts of the same image, the next images will be similar EXCEPT where you click (if you choose CHANGE in the SELECTED-AREA section). Generated images will be a mix of similar images and completly diffeent images.\n
+ - if you click :red[ONE box and parts of the same image], the next images will be similar, with similarity MOSTLY where you click (if you choose SAVE in the SELECTED-AREA section). Generated images will be a mix of similar images and completly diffeent images.\n
 
- - if you click ONE box and parts of the same image, the next images will be similar MOSTLY where you click (if you choose SAVE in the SELECTED-AREA section). Generated images will be a mix of similar images and completly diffeent images.\n
+ - if you click :red[AT LEAST TWO inspirational boxes] (i.e. two different images), they will be combined. :red[(Optional) clicks on the images] (at least one click per image, then) indicate the parts you want to keep.\n
 
- - if you click AT LEAST TWO boxes (two different images), they will be combined. Clicks on the image indicate the parts you want to keep.\n
+ When you are happy with what you get, you can :violet[(i) select one image and request a high-resolution version], and/or :violet[(ii) select two images and create an animation from the first to the second] (this works well if the two images are not too far from each other).
+
 
  If you have an error, try to "reload last state" or "reset state" buttons. If UI stucks for more than 2 minutes with any reason try to reload this page and if it doesn't help - restart\
  in colab (Runtime->Restart and run all), then click on the newly created link"""
