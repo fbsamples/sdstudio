@@ -1094,7 +1094,9 @@ if state["load_inpaint"]:
         pipe_inpaint = state["pipe_inpaint"]
     pipe_inpaint = pipe_inpaint.to("cuda")
 if nn_to_gen + "pipe" not in state or state["model_use_id"] != model_use_id:
-    with st.spinner("Downloading Diffusion data. It would take about 40 seconds."):
+    dict_names = {0: "SD2.0", 1: "SD1.4", 2: "SD1.4 tuned on MJ", 3: "other"}
+    model_name = dict_names[model_use_id] if model_use_id in dict_names else "unknown"
+    with st.spinner(f"Downloading {model_name} diffusion model should take ~40 seconds."):
         if model_use_id == 0:
             pipe_file_name = ".pipeSD2"
 
