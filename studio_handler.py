@@ -463,7 +463,7 @@ def generate_movie(
     st.caption(
         f'1 {type(state["imagev"][state["movie_order"][-1]])} {state["imagev"][state["movie_order"][-1]].size}'
     )
-
+    result_pictures = result_pictures + result_pictures[::-1]
     img_gif = result_pictures[0]
     gif_name = f'movie_{len(state["gif_names"])}.gif'
     img_gif.save(
