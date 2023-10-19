@@ -718,7 +718,7 @@ def generate_pictures(
                         assert xv >= 0
                         assert xv < 1
                         dist = []
-                        assert chosen > 0
+                        assert len(chosen) > 0
                         for i, c in enumerate(chosen):
                             dists_point = [
                                 np.linalg.norm(
