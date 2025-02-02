@@ -8,7 +8,7 @@ Paper:  https://dl.acm.org/doi/abs/10.1145/3583131.3590471
 Nomination: https://gecco-2023.sigevo.org/Best-Paper-Nominations
 
 ## Requirements
-Google colab.
+Project can run in Google colab.
 
 ## Building 
 Just run and it should work, ping us if it does not :-)
@@ -30,6 +30,7 @@ All instruction is in the notebook.
 
 ## Authors
 Main author for this project is Nikolai Kniazev (irumata)
+
 Github logins of authors: irumata, teytaud, mzameshina, mathuvu, artemru
 
 ## License
