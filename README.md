@@ -29,7 +29,8 @@ We can also combine different pictures, generate animation and apply different n
 All instruction is in the notebook.
 
 ## Authors
-Github loginss of authors: irumata (main author), teytaud, mzameshina, mathuvu, artemru
+Main author for this project is Nikolai Kniazev (irumata)
+Github logins of authors: irumata, teytaud, mzameshina, mathuvu, artemru
 
 ## License
 MIT License
